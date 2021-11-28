@@ -1,18 +1,17 @@
 use crate::error::{Error, Result};
-mod hash_stuff;
 
 /// TODO: maybe replace immutable iterator with mutable? or use interior mutability?
 
 /// Smart thermometer (get themperature)
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Thermometer {}
 
 /// Smart plug (on/off power, get current using power)
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Plug {}
 
 /// Type of smart device
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Type {
     /// smart thermometer
     Thermometer(Thermometer),
@@ -21,7 +20,7 @@ pub enum Type {
 }
 
 /// Smart device
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Device {
     name: String,
     description: String,
