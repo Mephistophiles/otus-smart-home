@@ -1,9 +1,9 @@
-use super::Room;
-
 use std::{
     borrow::Borrow,
     hash::{Hash, Hasher},
 };
+
+use super::Room;
 
 impl PartialEq for Room {
     fn eq(&self, rhs: &Self) -> bool {
