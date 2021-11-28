@@ -10,3 +10,6 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 thiserror = "1.0.30"
+
+[dev-dependencies]
+pretty_assertions = "1.0.0"
