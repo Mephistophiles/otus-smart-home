@@ -1,0 +1,10 @@
+status = [
+    "Test Suite",
+    "Rustfmt",
+    "Clippy",
+    "Docs",
+    "Publish dry run",
+    "Code coverage",
+    "Security audit",
+]
+delete_merged_branches = true
