@@ -58,11 +58,11 @@ impl Room {
         self.devices.get(name)
     }
 
-    pub fn iter(&self) -> std::collections::hash_map::Iter<'_, String, Device> {
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &Device)> {
         self.devices.iter()
     }
 
-    pub fn iter_mut(&mut self) -> std::collections::hash_map::IterMut<'_, String, Device> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&String, &mut Device)> {
         self.devices.iter_mut()
     }
 
