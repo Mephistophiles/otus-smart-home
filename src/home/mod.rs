@@ -1,3 +1,4 @@
+use crate::error::{Error, Result};
 use crate::room::Room;
 use std::collections::HashSet;
 
@@ -35,8 +36,13 @@ impl Home {
     }
 
     /// Add room to the Home
-    pub fn add_room(&mut self, room: Room) {
-        self.rooms.insert(room);
+    pub fn add_room(&mut self, room: Room) -> Result<()> {
+        if self.rooms.contains(room.name()) {
+            Err(Error::RoomAlreadyExists(room))
+        } else {
+            self.rooms.insert(room);
+            Ok(())
+        }
     }
 
     /// Del room from the Home
@@ -67,9 +73,14 @@ mod tests {
         assert_eq!(home.name(), "Sweet Home");
         assert_eq!(home.rooms().count(), 0);
 
-        home.add_room(Room::new("Room 1"));
+        home.add_room(Room::new("Room 1")).unwrap();
         assert_eq!(home.rooms().count(), 1);
         assert!(home.rooms().any(|room| room.name() == "Room 1"));
+
+        assert!(matches!(
+            home.add_room(Room::new("Room 1")),
+            Err(Error::RoomAlreadyExists(_))
+        ));
 
         home.del_room("Room 1");
         assert_eq!(home.rooms().count(), 0);
@@ -88,11 +99,11 @@ mod tests {
         assert_eq!(home.rooms().count(), 0);
         assert_eq!(home.room("NOT FOUND"), None);
 
-        home.add_room(Room::new("room 1"));
+        home.add_room(Room::new("room 1")).unwrap();
         assert_eq!(home.rooms().count(), 1);
         assert_eq!(home.room("room 1"), Some(&Room::new("room 1")));
 
-        home.add_room(Room::new("room 2"));
+        home.add_room(Room::new("room 2")).unwrap();
         assert_eq!(home.rooms().count(), 2);
         assert_eq!(home.room("room 2"), Some(&Room::new("room 2")));
 

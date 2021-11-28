@@ -1,5 +1,6 @@
 /// Room management
 use crate::device::{self, Device, Plug, Thermometer};
+use crate::error::{Error, Result};
 use std::collections::HashSet;
 
 mod hash_stuff;
@@ -38,8 +39,14 @@ impl Room {
     }
 
     /// Add device to the Room
-    pub fn add_device(&mut self, device: Device) {
-        self.devices.insert(device);
+    pub fn add_device(&mut self, device: Device) -> Result<()> {
+        if self.devices.contains(device.name()) {
+            Err(Error::DeviceAlreadyExists(device))
+        } else {
+            self.devices.insert(device);
+
+            Ok(())
+        }
     }
 
     /// Del device from the Room
@@ -93,7 +100,8 @@ mod tests {
             "smart thermometer",
             "Handmade thermometer",
             device::Type::Thermometer(device::Thermometer {}),
-        ));
+        ))
+        .unwrap();
 
         assert_eq!(room.devices().count(), 1);
         assert_eq!(
@@ -109,6 +117,16 @@ mod tests {
             "smart plug",
             "Handmade plug",
             device::Type::Plug(device::Plug {}),
+        ))
+        .unwrap();
+
+        assert!(matches!(
+            room.add_device(Device::new(
+                "smart plug",
+                "Handmade plug",
+                device::Type::Plug(device::Plug {}),
+            )),
+            Err(Error::DeviceAlreadyExists(_))
         ));
 
         assert_eq!(room.devices().count(), 2);

@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use crate::error::{Error, Result};
 mod hash_stuff;
 
 /// TODO: maybe replace immutable iterator with mutable? or use interior mutability?
@@ -60,22 +60,22 @@ impl Device {
 impl Plug {
     /// Enable smart plug
     pub fn on(&self) -> Result<()> {
-        bail!("Not implemented")
+        Err(Error::NotImplemented)
     }
     /// Disable smart plug
     pub fn off(&self) -> Result<()> {
-        bail!("Not implemented")
+        Err(Error::NotImplemented)
     }
     /// Get current using power
     pub fn current_power(&self) -> Result<f64> {
-        bail!("Not implemented")
+        Err(Error::NotImplemented)
     }
 }
 
 impl Thermometer {
     /// Get current temperature
     pub fn current_temperature(&self) -> Result<f64> {
-        bail!("Not implemented")
+        Err(Error::NotImplemented)
     }
 }
 
@@ -97,16 +97,13 @@ mod tests {
         let plug = Plug {};
 
         let plug_res = plug.on();
-        assert!(plug_res.is_err());
-        assert_eq!(&plug_res.unwrap_err().to_string(), "Not implemented");
+        assert!(matches!(plug_res, Err(Error::NotImplemented)));
 
         let plug_res = plug.off();
-        assert!(plug_res.is_err());
-        assert_eq!(&plug_res.unwrap_err().to_string(), "Not implemented");
+        assert!(matches!(plug_res, Err(Error::NotImplemented)));
 
         let plug_res = plug.current_power();
-        assert!(plug_res.is_err());
-        assert_eq!(&plug_res.unwrap_err().to_string(), "Not implemented");
+        assert!(matches!(plug_res, Err(Error::NotImplemented)));
     }
 
     #[test]
@@ -114,7 +111,6 @@ mod tests {
         let thermometer = Thermometer {};
 
         let thermometer_res = thermometer.current_temperature();
-        assert!(thermometer_res.is_err());
-        assert_eq!(&thermometer_res.unwrap_err().to_string(), "Not implemented");
+        assert!(matches!(thermometer_res, Err(Error::NotImplemented)));
     }
 }
