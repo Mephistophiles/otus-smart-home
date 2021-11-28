@@ -5,6 +5,4 @@ mod error;
 mod home;
 mod room;
 
-pub use crate::device::Device;
-pub use crate::home::Home;
-pub use crate::room::Room;
+pub use crate::{device::Device, home::Home, room::Room};

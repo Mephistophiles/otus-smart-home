@@ -1,5 +1,6 @@
-use crate::{Device, Room};
 use thiserror::Error;
+
+use crate::{Device, Room};
 
 /// Error kind
 #[derive(Error, Debug)]

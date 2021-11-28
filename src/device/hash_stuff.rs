@@ -1,8 +1,9 @@
-use super::Device;
 use std::{
     borrow::Borrow,
     hash::{Hash, Hasher},
 };
+
+use super::Device;
 
 impl PartialEq for Device {
     fn eq(&self, rhs: &Self) -> bool {

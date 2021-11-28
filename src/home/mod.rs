@@ -1,6 +1,9 @@
-use crate::error::{Error, Result};
-use crate::room::Room;
 use std::collections::HashSet;
+
+use crate::{
+    error::{Error, Result},
+    room::Room,
+};
 
 /// Entry point for smart home control - Home
 #[derive(Debug)]

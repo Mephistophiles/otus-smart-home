@@ -1,7 +1,8 @@
+use std::collections::HashSet;
+
 /// Room management
 use crate::device::{self, Device, Plug, Thermometer};
 use crate::error::{Error, Result};
-use std::collections::HashSet;
 
 mod hash_stuff;
 
