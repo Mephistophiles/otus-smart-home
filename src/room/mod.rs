@@ -1,18 +1,16 @@
-use std::collections::HashSet;
+use std::collections::{hash_map::Entry, HashMap};
 
 /// Room management
 use crate::device::{self, Device, Plug, Thermometer};
 use crate::error::{Error, Result};
 
-mod hash_stuff;
-
 /// A room in the Home
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Room {
     /// Name of the room
     name: String,
     /// List of devices in the current room
-    devices: HashSet<Device>,
+    devices: HashMap<String, Device>,
 }
 
 impl Room {
@@ -22,7 +20,7 @@ impl Room {
     ///
     /// let room = Room::new("Test");
     /// assert_eq!(room.name(), "Test");
-    /// assert_eq!(room.devices().count(), 0);
+    /// assert_eq!(room.iter().count(), 0);
     /// ```
     pub fn new<T>(name: T) -> Self
     where
@@ -41,18 +39,18 @@ impl Room {
 
     /// Add device to the Room
     pub fn add_device(&mut self, device: Device) -> Result<()> {
-        if self.devices.contains(device.name()) {
-            Err(Error::DeviceAlreadyExists(device))
-        } else {
-            self.devices.insert(device);
-
-            Ok(())
+        match self.devices.entry(device.name().to_string()) {
+            Entry::Occupied(_) => Err(Error::DeviceAlreadyExists(device)),
+            entry @ Entry::Vacant(_) => {
+                entry.or_insert(device);
+                Ok(())
+            }
         }
     }
 
     /// Del device from the Room
     pub fn del_device(&mut self, name: &str) -> Option<Device> {
-        self.devices.take(name)
+        self.devices.remove(name)
     }
 
     /// Get device by name
@@ -60,16 +58,18 @@ impl Room {
         self.devices.get(name)
     }
 
-    /// Gets list of devices in current room
-    pub fn devices(&self) -> impl Iterator<Item = &Device> {
+    pub fn iter(&self) -> std::collections::hash_map::Iter<'_, String, Device> {
         self.devices.iter()
+    }
+
+    pub fn iter_mut(&mut self) -> std::collections::hash_map::IterMut<'_, String, Device> {
+        self.devices.iter_mut()
     }
 
     /// Get plug devices
     pub fn plug_devices(&self) -> impl Iterator<Item = (&Device, &Plug)> {
-        self.devices
-            .iter()
-            .filter_map(|device| match device.device_type() {
+        self.iter()
+            .filter_map(|(_, device)| match device.device_type() {
                 device::Type::Plug(plug) => Some((device, plug)),
                 _ => None,
             })
@@ -77,9 +77,8 @@ impl Room {
 
     /// Get thermometer devices
     pub fn thermometer_devices(&self) -> impl Iterator<Item = (&Device, &Thermometer)> {
-        self.devices
-            .iter()
-            .filter_map(|device| match device.device_type() {
+        self.iter()
+            .filter_map(|(_, device)| match device.device_type() {
                 device::Type::Thermometer(thermometer) => Some((device, thermometer)),
                 _ => None,
             })
@@ -96,7 +95,7 @@ mod tests {
     #[test]
     fn example() {
         let mut room = Room::new("room");
-        assert_eq!(room.devices().count(), 0);
+        assert_eq!(room.iter().count(), 0);
         assert_eq!(room.device("NOT_FOUND"), None);
 
         room.add_device(Device::new(
@@ -106,7 +105,7 @@ mod tests {
         ))
         .unwrap();
 
-        assert_eq!(room.devices().count(), 1);
+        assert_eq!(room.iter().count(), 1);
         assert_eq!(
             room.device("smart thermometer"),
             Some(&Device::new(
@@ -132,7 +131,8 @@ mod tests {
             Err(Error::DeviceAlreadyExists(_))
         ));
 
-        assert_eq!(room.devices().count(), 2);
+        assert_eq!(room.iter().count(), 2);
+        assert_eq!(room.iter_mut().count(), 2);
         assert_eq!(
             room.device("smart plug"),
             Some(&Device::new(
