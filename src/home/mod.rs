@@ -60,12 +60,12 @@ impl Home {
     }
 
     /// Get iterator over rooms
-    pub fn iter(&self) -> std::collections::hash_map::Iter<'_, String, Room> {
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &Room)> {
         self.rooms.iter()
     }
 
     /// Get mutable iterator over rooms
-    pub fn iter_mut(&mut self) -> std::collections::hash_map::IterMut<'_, String, Room> {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&String, &mut Room)> {
         self.rooms.iter_mut()
     }
 }
