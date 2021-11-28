@@ -58,10 +58,12 @@ impl Room {
         self.devices.get(name)
     }
 
+    /// Get device iterator in the current room
     pub fn iter(&self) -> impl Iterator<Item = (&String, &Device)> {
         self.devices.iter()
     }
 
+    /// Get mutable device iterator in the current room
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (&String, &mut Device)> {
         self.devices.iter_mut()
     }
