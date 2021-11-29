@@ -32,7 +32,7 @@ impl Room {
     /// assert_eq!(room.device_iter().count(), 1);
     /// assert!(room
     ///     .device_iter()
-    ///     .any(|(_, device)| device.name() == "Device 1"));
+    ///     .any(|device| device.name() == "Device 1"));
     ///
     /// room.del_device("Device 1").unwrap();
     /// assert_eq!(room.device_iter().count(), 0);
@@ -74,19 +74,19 @@ impl Room {
     }
 
     /// Get device iterator in the current room
-    pub fn device_iter(&self) -> impl Iterator<Item = (&String, &Device)> {
-        self.devices.iter()
+    pub fn device_iter(&self) -> impl Iterator<Item = &Device> {
+        self.devices.iter().map(|(_, device)| device)
     }
 
     /// Get mutable device iterator in the current room
-    pub fn device_iter_mut(&mut self) -> impl Iterator<Item = (&String, &mut Device)> {
-        self.devices.iter_mut()
+    pub fn device_iter_mut(&mut self) -> impl Iterator<Item = &mut Device> {
+        self.devices.iter_mut().map(|(_, device)| device)
     }
 
     /// Get plug devices
     pub fn plug_devices(&self) -> impl Iterator<Item = (&Device, &Plug)> {
         self.device_iter()
-            .filter_map(|(_, device)| match device.device_type() {
+            .filter_map(|device| match device.device_type() {
                 device::Type::Plug(plug) => Some((device, plug)),
                 _ => None,
             })
@@ -95,7 +95,7 @@ impl Room {
     /// Get thermometer devices
     pub fn thermometer_devices(&self) -> impl Iterator<Item = (&Device, &Thermometer)> {
         self.device_iter()
-            .filter_map(|(_, device)| match device.device_type() {
+            .filter_map(|device| match device.device_type() {
                 device::Type::Thermometer(thermometer) => Some((device, thermometer)),
                 _ => None,
             })

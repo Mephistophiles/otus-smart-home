@@ -25,7 +25,7 @@ impl Home {
     ///
     /// home.add_room(Room::new("Room 1")).unwrap();
     /// assert_eq!(home.room_iter_mut().count(), 1);
-    /// assert!(home.room_iter().any(|(_, room)| room.name() == "Room 1"));
+    /// assert!(home.room_iter().any(|room| room.name() == "Room 1"));
     ///
     /// home.del_room("Room 1").unwrap();
     /// assert_eq!(home.room_iter().count(), 0);
@@ -67,13 +67,13 @@ impl Home {
     }
 
     /// Get iterator over rooms
-    pub fn room_iter(&self) -> impl Iterator<Item = (&String, &Room)> {
-        self.rooms.iter()
+    pub fn room_iter(&self) -> impl Iterator<Item = &Room> {
+        self.rooms.iter().map(|(_, room)| room)
     }
 
     /// Get mutable iterator over rooms
-    pub fn room_iter_mut(&mut self) -> impl Iterator<Item = (&String, &mut Room)> {
-        self.rooms.iter_mut()
+    pub fn room_iter_mut(&mut self) -> impl Iterator<Item = &mut Room> {
+        self.rooms.iter_mut().map(|(_, room)| room)
     }
 }
 
@@ -95,7 +95,7 @@ mod tests {
         home.add_room(Room::new("Room 1")).unwrap();
         assert_eq!(home.room_iter().count(), 1);
         assert_eq!(home.room_iter_mut().count(), 1);
-        assert!(home.room_iter().any(|(_, room)| room.name() == "Room 1"));
+        assert!(home.room_iter().any(|room| room.name() == "Room 1"));
 
         assert!(matches!(
             home.add_room(Room::new("Room 1")),
