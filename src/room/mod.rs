@@ -20,7 +20,7 @@ impl Room {
     ///
     /// let room = Room::new("Test");
     /// assert_eq!(room.name(), "Test");
-    /// assert_eq!(room.iter().count(), 0);
+    /// assert_eq!(room.device_iter().count(), 0);
     /// ```
     pub fn new<T>(name: T) -> Self
     where
@@ -59,18 +59,18 @@ impl Room {
     }
 
     /// Get device iterator in the current room
-    pub fn iter(&self) -> impl Iterator<Item = (&String, &Device)> {
+    pub fn device_iter(&self) -> impl Iterator<Item = (&String, &Device)> {
         self.devices.iter()
     }
 
     /// Get mutable device iterator in the current room
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&String, &mut Device)> {
+    pub fn device_iter_mut(&mut self) -> impl Iterator<Item = (&String, &mut Device)> {
         self.devices.iter_mut()
     }
 
     /// Get plug devices
     pub fn plug_devices(&self) -> impl Iterator<Item = (&Device, &Plug)> {
-        self.iter()
+        self.device_iter()
             .filter_map(|(_, device)| match device.device_type() {
                 device::Type::Plug(plug) => Some((device, plug)),
                 _ => None,
@@ -79,7 +79,7 @@ impl Room {
 
     /// Get thermometer devices
     pub fn thermometer_devices(&self) -> impl Iterator<Item = (&Device, &Thermometer)> {
-        self.iter()
+        self.device_iter()
             .filter_map(|(_, device)| match device.device_type() {
                 device::Type::Thermometer(thermometer) => Some((device, thermometer)),
                 _ => None,
@@ -97,7 +97,7 @@ mod tests {
     #[test]
     fn example() {
         let mut room = Room::new("room");
-        assert_eq!(room.iter().count(), 0);
+        assert_eq!(room.device_iter().count(), 0);
         assert_eq!(room.device("NOT_FOUND"), None);
 
         room.add_device(Device::new(
@@ -107,7 +107,7 @@ mod tests {
         ))
         .unwrap();
 
-        assert_eq!(room.iter().count(), 1);
+        assert_eq!(room.device_iter().count(), 1);
         assert_eq!(
             room.device("smart thermometer"),
             Some(&Device::new(
@@ -133,8 +133,8 @@ mod tests {
             Err(Error::DeviceAlreadyExists(_))
         ));
 
-        assert_eq!(room.iter().count(), 2);
-        assert_eq!(room.iter_mut().count(), 2);
+        assert_eq!(room.device_iter().count(), 2);
+        assert_eq!(room.device_iter_mut().count(), 2);
         assert_eq!(
             room.device("smart plug"),
             Some(&Device::new(
