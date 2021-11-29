@@ -1,58 +1,114 @@
 use crate::error::{Error, Result};
 
-/// TODO: maybe replace immutable iterator with mutable? or use interior mutability?
+pub trait SmartDevice {
+    fn new<N, D>(name: N, description: D) -> Self
+    where
+        N: Into<String>,
+        D: Into<String>;
+    fn name(&self) -> &str;
+    fn description(&self) -> &str;
+}
 
 /// Smart thermometer (get themperature)
 #[derive(Debug, PartialEq)]
-pub struct Thermometer {}
+pub struct Thermometer {
+    name: String,
+    description: String,
+}
 
 /// Smart plug (on/off power, get current using power)
 #[derive(Debug, PartialEq)]
-pub struct Plug {}
+pub struct Plug {
+    name: String,
+    description: String,
+}
 
-/// Type of smart device
+/// Smart device
 #[derive(Debug, PartialEq)]
-pub enum Type {
+pub enum Device {
     /// smart thermometer
     Thermometer(Thermometer),
     /// smart plug
     Plug(Plug),
 }
 
-/// Smart device
-#[derive(Debug, PartialEq)]
-pub struct Device {
-    name: String,
-    description: String,
-    device_type: Type,
-}
-
 impl Device {
     /// Create a new smart device
-    pub fn new<T>(name: T, description: T, device_type: Type) -> Self
+    pub fn new<T>(device: T) -> Self
     where
-        T: Into<String>,
+        T: SmartDevice + Into<Device>,
     {
-        Self {
-            name: name.into(),
-            description: description.into(),
-            device_type,
-        }
+        device.into()
     }
 
     /// Gets device name
     pub fn name(&self) -> &str {
-        &self.name
+        match self {
+            Device::Plug(plug) => plug.name(),
+            Device::Thermometer(thermometer) => thermometer.name(),
+        }
     }
 
     /// Gets device description
     pub fn description(&self) -> &str {
-        &self.description
+        match self {
+            Device::Plug(plug) => plug.description(),
+            Device::Thermometer(thermometer) => thermometer.description(),
+        }
+    }
+}
+
+impl SmartDevice for Plug {
+    fn new<N, D>(name: N, description: D) -> Self
+    where
+        N: Into<String>,
+        D: Into<String>,
+    {
+        Self {
+            name: name.into(),
+            description: description.into(),
+        }
     }
 
-    /// Get device type
-    pub fn device_type(&self) -> &Type {
-        &self.device_type
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn description(&self) -> &str {
+        &self.description
+    }
+}
+
+impl From<Plug> for Device {
+    fn from(plug: Plug) -> Self {
+        Device::Plug(plug)
+    }
+}
+
+impl SmartDevice for Thermometer {
+    fn new<N, D>(name: N, description: D) -> Self
+    where
+        N: Into<String>,
+        D: Into<String>,
+    {
+        Self {
+            name: name.into(),
+            description: description.into(),
+        }
+    }
+
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn description(&self) -> &str {
+        &self.description
+    }
+}
+
+impl From<Thermometer> for Device {
+    fn from(thermometer: Thermometer) -> Self {
+        Device::Thermometer(thermometer)
     }
 }
 
@@ -86,16 +142,20 @@ mod tests {
 
     #[test]
     fn device_stuff() {
-        // TODO: ugly init
-        let device = Device::new("plug", "plug in bedroom", Type::Plug(Plug {}));
+        let device = Device::new(Plug::new("plug", "plug in bedroom"));
         assert_eq!(device.name(), "plug");
         assert_eq!(device.description(), "plug in bedroom");
-        assert!(matches!(device.device_type(), &Type::Plug(_)));
+        assert!(matches!(&device, &Device::Plug { .. }));
+
+        let device = Device::new(Thermometer::new("thermometer", "thermometer in bedroom"));
+        assert_eq!(device.name(), "thermometer");
+        assert_eq!(device.description(), "thermometer in bedroom");
+        assert!(matches!(&device, &Device::Thermometer { .. }));
     }
 
     #[test]
     fn plug_test() {
-        let plug = Plug {};
+        let plug = Plug::new("plug", "plug");
 
         let plug_res = plug.on();
         assert!(matches!(plug_res, Err(Error::NotImplemented)));
@@ -109,7 +169,7 @@ mod tests {
 
     #[test]
     fn thermometer_test() {
-        let thermometer = Thermometer {};
+        let thermometer = Thermometer::new("thermometer", "thermometer");
 
         let thermometer_res = thermometer.current_temperature();
         assert!(matches!(thermometer_res, Err(Error::NotImplemented)));
