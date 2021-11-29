@@ -5,4 +5,8 @@ mod error;
 mod home;
 mod room;
 
-pub use crate::{device::Device, home::Home, room::Room};
+pub use crate::{
+    device::{Device, Plug, Thermometer, Type as SmartDevice},
+    home::Home,
+    room::Room,
+};
