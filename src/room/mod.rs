@@ -5,6 +5,26 @@ use crate::device::{self, Device, Plug, Thermometer};
 use crate::error::{Error, Result};
 
 /// A room in the Home
+/// ```
+/// use otus_smart_home::{Device, Room, SmartDevice, Thermometer};
+///
+/// let mut room = Room::new("Room 1");
+///
+/// assert_eq!(room.name(), "Room 1");
+/// assert_eq!(room.device_iter().count(), 0);
+///
+/// room.add_device(Device::new(
+///     "Device 1",
+///     "thermometer",
+///     SmartDevice::Thermometer(Thermometer {}),
+/// ))
+/// .unwrap();
+/// assert_eq!(room.device_iter().count(), 1);
+/// assert!(room.device_iter().any(|device| device.name() == "Device 1"));
+///
+/// room.del_device("Device 1").unwrap();
+/// assert_eq!(room.device_iter().count(), 0);
+/// ```
 #[derive(Debug, PartialEq)]
 pub struct Room {
     /// Name of the room
@@ -15,28 +35,6 @@ pub struct Room {
 
 impl Room {
     /// Construct a new empty room
-    /// ```
-    /// use otus_smart_home::{Device, Room, SmartDevice, Thermometer};
-    ///
-    /// let mut room = Room::new("Room 1");
-    ///
-    /// assert_eq!(room.name(), "Room 1");
-    /// assert_eq!(room.device_iter().count(), 0);
-    ///
-    /// room.add_device(Device::new(
-    ///     "Device 1",
-    ///     "thermometer",
-    ///     SmartDevice::Thermometer(Thermometer {}),
-    /// ))
-    /// .unwrap();
-    /// assert_eq!(room.device_iter().count(), 1);
-    /// assert!(room
-    ///     .device_iter()
-    ///     .any(|device| device.name() == "Device 1"));
-    ///
-    /// room.del_device("Device 1").unwrap();
-    /// assert_eq!(room.device_iter().count(), 0);
-    /// ```
     pub fn new<T>(name: T) -> Self
     where
         T: Into<String>,

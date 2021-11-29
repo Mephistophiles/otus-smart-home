@@ -6,6 +6,20 @@ use crate::{
 };
 
 /// Entry point for smart home control - Home
+/// ```
+/// use otus_smart_home::{Home, Room};
+///
+/// let mut home = Home::new("Sweet Home".to_owned());
+/// assert_eq!(home.name(), "Sweet Home");
+/// assert_eq!(home.room_iter().count(), 0);
+///
+/// home.add_room(Room::new("Room 1")).unwrap();
+/// assert_eq!(home.room_iter_mut().count(), 1);
+/// assert!(home.room_iter().any(|room| room.name() == "Room 1"));
+///
+/// home.del_room("Room 1").unwrap();
+/// assert_eq!(home.room_iter().count(), 0);
+/// ```
 #[derive(Debug)]
 pub struct Home {
     /// Name of the Home
@@ -16,20 +30,6 @@ pub struct Home {
 
 impl Home {
     /// Construct a new empty home
-    /// ```
-    /// use otus_smart_home::{Home, Room};
-    ///
-    /// let mut home = Home::new("Sweet Home".to_owned());
-    /// assert_eq!(home.name(), "Sweet Home");
-    /// assert_eq!(home.room_iter().count(), 0);
-    ///
-    /// home.add_room(Room::new("Room 1")).unwrap();
-    /// assert_eq!(home.room_iter_mut().count(), 1);
-    /// assert!(home.room_iter().any(|room| room.name() == "Room 1"));
-    ///
-    /// home.del_room("Room 1").unwrap();
-    /// assert_eq!(home.room_iter().count(), 0);
-    /// ```
     pub fn new<T>(name: T) -> Self
     where
         T: Into<String>,
