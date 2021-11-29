@@ -1,7 +1,7 @@
 use std::collections::{hash_map::Entry, HashMap};
 
 /// Room management
-use crate::device::{self, Device, Plug, Thermometer};
+use crate::device::{Device, Plug, SmartDevice, Thermometer};
 use crate::error::{Error, Result};
 
 /// A room in the Home
@@ -13,12 +13,8 @@ use crate::error::{Error, Result};
 /// assert_eq!(room.name(), "Room 1");
 /// assert_eq!(room.device_iter().count(), 0);
 ///
-/// room.add_device(Device::new(
-///     "Device 1",
-///     "thermometer",
-///     SmartDevice::Thermometer(Thermometer {}),
-/// ))
-/// .unwrap();
+/// room.add_device(Thermometer::new("Device 1", "thermometer"))
+///     .unwrap();
 /// assert_eq!(room.device_iter().count(), 1);
 /// assert!(room.device_iter().any(|device| device.name() == "Device 1"));
 ///
@@ -51,11 +47,14 @@ impl Room {
     }
 
     /// Add device to the Room
-    pub fn add_device(&mut self, device: Device) -> Result<()> {
+    pub fn add_device<T>(&mut self, device: T) -> Result<()>
+    where
+        T: SmartDevice + Into<Device>,
+    {
         match self.devices.entry(device.name().to_string()) {
-            Entry::Occupied(_) => Err(Error::DeviceAlreadyExists(device)),
+            Entry::Occupied(_) => Err(Error::DeviceAlreadyExists(device.into())),
             entry @ Entry::Vacant(_) => {
-                entry.or_insert(device);
+                entry.or_insert_with(|| device.into());
                 Ok(())
             }
         }
@@ -82,21 +81,19 @@ impl Room {
     }
 
     /// Get plug devices
-    pub fn plug_devices(&self) -> impl Iterator<Item = (&Device, &Plug)> {
-        self.device_iter()
-            .filter_map(|device| match device.device_type() {
-                device::Type::Plug(plug) => Some((device, plug)),
-                _ => None,
-            })
+    pub fn plug_devices(&self) -> impl Iterator<Item = &Plug> {
+        self.device_iter().filter_map(|device| match device {
+            Device::Plug(plug) => Some(plug),
+            _ => None,
+        })
     }
 
     /// Get thermometer devices
-    pub fn thermometer_devices(&self) -> impl Iterator<Item = (&Device, &Thermometer)> {
-        self.device_iter()
-            .filter_map(|device| match device.device_type() {
-                device::Type::Thermometer(thermometer) => Some((device, thermometer)),
-                _ => None,
-            })
+    pub fn thermometer_devices(&self) -> impl Iterator<Item = &Thermometer> {
+        self.device_iter().filter_map(|device| match device {
+            Device::Thermometer(thermometer) => Some(thermometer),
+            _ => None,
+        })
     }
 }
 
@@ -105,7 +102,6 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
-    use crate::device;
 
     #[test]
     fn example() {
@@ -113,36 +109,26 @@ mod tests {
         assert_eq!(room.device_iter().count(), 0);
         assert_eq!(room.device("NOT_FOUND"), None);
 
-        room.add_device(Device::new(
+        room.add_device(Thermometer::new(
             "smart thermometer",
             "Handmade thermometer",
-            device::Type::Thermometer(device::Thermometer {}),
         ))
         .unwrap();
 
         assert_eq!(room.device_iter().count(), 1);
         assert_eq!(
             room.device("smart thermometer"),
-            Some(&Device::new(
+            Some(&Device::Thermometer(Thermometer::new(
                 "smart thermometer",
                 "Handmade thermometer",
-                device::Type::Thermometer(device::Thermometer {}),
-            ))
+            )))
         );
 
-        room.add_device(Device::new(
-            "smart plug",
-            "Handmade plug",
-            device::Type::Plug(device::Plug {}),
-        ))
-        .unwrap();
+        room.add_device(Plug::new("smart plug", "Handmade plug"))
+            .unwrap();
 
         assert!(matches!(
-            room.add_device(Device::new(
-                "smart plug",
-                "Handmade plug",
-                device::Type::Plug(device::Plug {}),
-            )),
+            room.add_device(Plug::new("smart plug", "Handmade plug",)),
             Err(Error::DeviceAlreadyExists(_))
         ));
 
@@ -150,11 +136,7 @@ mod tests {
         assert_eq!(room.device_iter_mut().count(), 2);
         assert_eq!(
             room.device("smart plug"),
-            Some(&Device::new(
-                "smart plug",
-                "Handmade plug",
-                device::Type::Plug(device::Plug {}),
-            ))
+            Some(&Device::Plug(Plug::new("smart plug", "Handmade plug")))
         );
 
         assert_eq!(room.thermometer_devices().count(), 1);
@@ -166,9 +148,6 @@ mod tests {
 
         assert_eq!(deleted_device.name(), "smart plug");
         assert_eq!(deleted_device.description(), "Handmade plug");
-        assert!(matches!(
-            deleted_device.device_type(),
-            device::Type::Plug(_)
-        ));
+        assert!(matches!(deleted_device, Device::Plug(_)));
     }
 }
