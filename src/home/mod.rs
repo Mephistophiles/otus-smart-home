@@ -21,7 +21,7 @@ impl Home {
     ///
     /// let home = Home::new("Sweet Home".to_owned());
     /// assert_eq!(home.name(), "Sweet Home");
-    /// assert_eq!(home.iter().count(), 0);
+    /// assert_eq!(home.room_iter().count(), 0);
     /// ```
     pub fn new<T>(name: T) -> Self
     where
@@ -60,12 +60,12 @@ impl Home {
     }
 
     /// Get iterator over rooms
-    pub fn iter(&self) -> impl Iterator<Item = (&String, &Room)> {
+    pub fn room_iter(&self) -> impl Iterator<Item = (&String, &Room)> {
         self.rooms.iter()
     }
 
     /// Get mutable iterator over rooms
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = (&String, &mut Room)> {
+    pub fn room_iter_mut(&mut self) -> impl Iterator<Item = (&String, &mut Room)> {
         self.rooms.iter_mut()
     }
 }
@@ -82,13 +82,13 @@ mod tests {
         let mut home = Home::new("Sweet Home");
 
         assert_eq!(home.name(), "Sweet Home");
-        assert_eq!(home.iter().count(), 0);
-        assert_eq!(home.iter_mut().count(), 0);
+        assert_eq!(home.room_iter().count(), 0);
+        assert_eq!(home.room_iter_mut().count(), 0);
 
         home.add_room(Room::new("Room 1")).unwrap();
-        assert_eq!(home.iter().count(), 1);
-        assert_eq!(home.iter_mut().count(), 1);
-        assert!(home.iter().any(|(_, room)| room.name() == "Room 1"));
+        assert_eq!(home.room_iter().count(), 1);
+        assert_eq!(home.room_iter_mut().count(), 1);
+        assert!(home.room_iter().any(|(_, room)| room.name() == "Room 1"));
 
         assert!(matches!(
             home.add_room(Room::new("Room 1")),
@@ -96,8 +96,8 @@ mod tests {
         ));
 
         home.del_room("Room 1");
-        assert_eq!(home.iter().count(), 0);
-        assert_eq!(home.iter_mut().count(), 0);
+        assert_eq!(home.room_iter().count(), 0);
+        assert_eq!(home.room_iter_mut().count(), 0);
     }
 
     #[test]
@@ -110,27 +110,27 @@ mod tests {
     fn room_management() {
         let mut home = Home::new("home");
 
-        assert_eq!(home.iter().count(), 0);
+        assert_eq!(home.room_iter().count(), 0);
         assert_eq!(home.room("NOT FOUND"), None);
 
         home.add_room(Room::new("room 1")).unwrap();
-        assert_eq!(home.iter().count(), 1);
+        assert_eq!(home.room_iter().count(), 1);
         assert_eq!(home.room("room 1"), Some(&Room::new("room 1")));
 
         home.add_room(Room::new("room 2")).unwrap();
-        assert_eq!(home.iter().count(), 2);
+        assert_eq!(home.room_iter().count(), 2);
         assert_eq!(home.room("room 2"), Some(&Room::new("room 2")));
 
         let deleted_room = home.del_room("room 1");
         assert_eq!(deleted_room, Some(Room::new("room 1")));
         assert_eq!(deleted_room.as_ref().map(|r| r.name()), Some("room 1"));
         assert_eq!(home.room("room 1"), None);
-        assert_eq!(home.iter().count(), 1);
+        assert_eq!(home.room_iter().count(), 1);
 
         let deleted_room = home.del_room("room 2");
         assert_eq!(deleted_room, Some(Room::new("room 2")));
         assert_eq!(deleted_room.as_ref().map(|r| r.name()), Some("room 2"));
         assert_eq!(home.room("room 2"), None);
-        assert_eq!(home.iter().count(), 0);
+        assert_eq!(home.room_iter().count(), 0);
     }
 }
