@@ -1,24 +1,16 @@
 use std::collections::{hash_map::Entry, HashMap};
 
 /// Room management
-use crate::device::{Device, Plug, SmartDevice, Thermometer};
+use crate::device::{Device, SmartDevice, SmartPlug, SmartThermometer};
 use crate::error::{Error, Result};
 
 /// A room in the Home
 /// ```
-/// use otus_smart_home::{Device, Room, SmartDevice, Thermometer};
+/// use otus_smart_home::{Device, Room};
 ///
 /// let mut room = Room::new("Room 1");
 ///
 /// assert_eq!(room.name(), "Room 1");
-/// assert_eq!(room.device_iter().count(), 0);
-///
-/// room.add_device(Thermometer::new("Device 1", "thermometer"))
-///     .unwrap();
-/// assert_eq!(room.device_iter().count(), 1);
-/// assert!(room.device_iter().any(|device| device.name() == "Device 1"));
-///
-/// room.del_device("Device 1").unwrap();
 /// assert_eq!(room.device_iter().count(), 0);
 /// ```
 #[derive(Debug, PartialEq)]
@@ -81,7 +73,7 @@ impl Room {
     }
 
     /// Get plug devices
-    pub fn plug_devices(&self) -> impl Iterator<Item = &Plug> {
+    pub fn plug_devices(&self) -> impl Iterator<Item = &Box<dyn SmartPlug>> {
         self.device_iter().filter_map(|device| match device {
             Device::Plug(plug) => Some(plug),
             _ => None,
@@ -89,7 +81,7 @@ impl Room {
     }
 
     /// Get thermometer devices
-    pub fn thermometer_devices(&self) -> impl Iterator<Item = &Thermometer> {
+    pub fn thermometer_devices(&self) -> impl Iterator<Item = &Box<dyn SmartThermometer>> {
         self.device_iter().filter_map(|device| match device {
             Device::Thermometer(thermometer) => Some(thermometer),
             _ => None,
@@ -102,6 +94,15 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
+    use crate::device::hardcoded_devices::{ExamplePlug, ExampleThermometer};
+
+    fn get_predefined_thermometer() -> Box<dyn SmartThermometer> {
+        ExampleThermometer::new("smart thermometer", "Handmade thermometer").into()
+    }
+
+    fn get_predefined_plug() -> Box<dyn SmartPlug> {
+        ExamplePlug::new("smart plug", "Handmade plug").into()
+    }
 
     #[test]
     fn example() {
@@ -109,26 +110,27 @@ mod tests {
         assert_eq!(room.device_iter().count(), 0);
         assert_eq!(room.device("NOT_FOUND"), None);
 
-        room.add_device(Thermometer::new(
-            "smart thermometer",
-            "Handmade thermometer",
-        ))
-        .unwrap();
+        room.add_device(get_predefined_thermometer()).unwrap();
 
         assert_eq!(room.device_iter().count(), 1);
         assert_eq!(
             room.device("smart thermometer"),
-            Some(&Device::Thermometer(Thermometer::new(
-                "smart thermometer",
-                "Handmade thermometer",
-            )))
+            Some(&Device::Thermometer(get_predefined_thermometer()))
         );
+        assert!(room.device_iter().any(|d| d.name() == "smart thermometer"));
+        assert!(room
+            .device_iter()
+            .any(|d| d.description() == "Handmade thermometer"));
 
-        room.add_device(Plug::new("smart plug", "Handmade plug"))
-            .unwrap();
+        let smart_device = room.device_iter().find(|d| d.name() == "smart thermometer");
+        let smart_device = format!("{:?}", smart_device);
+
+        assert_eq!(smart_device, "Some(Thermometer(\"smart thermometer\"))");
+
+        room.add_device(get_predefined_plug()).unwrap();
 
         assert!(matches!(
-            room.add_device(Plug::new("smart plug", "Handmade plug",)),
+            room.add_device(get_predefined_plug()),
             Err(Error::DeviceAlreadyExists(_))
         ));
 
@@ -136,8 +138,12 @@ mod tests {
         assert_eq!(room.device_iter_mut().count(), 2);
         assert_eq!(
             room.device("smart plug"),
-            Some(&Device::Plug(Plug::new("smart plug", "Handmade plug")))
+            Some(&Device::Plug(get_predefined_plug()))
         );
+        let smart_device = room.device_iter().find(|d| d.name() == "smart plug");
+        let smart_device = format!("{:?}", smart_device);
+
+        assert_eq!(smart_device, "Some(Plug(\"smart plug\"))");
 
         assert_eq!(room.thermometer_devices().count(), 1);
         assert_eq!(room.plug_devices().count(), 1);
