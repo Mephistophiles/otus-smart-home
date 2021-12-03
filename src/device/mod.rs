@@ -1,35 +1,77 @@
-use crate::error::{Error, Result};
+use crate::error::Result;
+pub(crate) mod hardcoded_devices;
 
 pub trait SmartDevice {
-    fn new<N, D>(name: N, description: D) -> Self
-    where
-        N: Into<String>,
-        D: Into<String>;
     fn name(&self) -> &str;
     fn description(&self) -> &str;
 }
 
 /// Smart thermometer (get themperature)
-#[derive(Debug, PartialEq)]
-pub struct Thermometer {
-    name: String,
-    description: String,
+pub trait SmartThermometer: SmartDevice {
+    /// Get current temperature
+    fn current_temperature(&self) -> Result<f64>;
 }
 
 /// Smart plug (on/off power, get current using power)
-#[derive(Debug, PartialEq)]
-pub struct Plug {
-    name: String,
-    description: String,
+pub trait SmartPlug: SmartDevice {
+    /// Enable smart plug
+    fn on(&self) -> Result<()>;
+    /// Disable smart plug
+    fn off(&self) -> Result<()>;
+    /// Get current using power
+    fn current_power(&self) -> Result<f64>;
 }
 
 /// Smart device
-#[derive(Debug, PartialEq)]
 pub enum Device {
     /// smart thermometer
-    Thermometer(Thermometer),
+    Thermometer(Box<dyn SmartThermometer>),
     /// smart plug
-    Plug(Plug),
+    Plug(Box<dyn SmartPlug>),
+}
+
+/// Blanked impl for Box<dyn Smart**DeviceType**>
+impl<T> SmartDevice for Box<T>
+where
+    T: SmartDevice + ?Sized,
+{
+    fn name(&self) -> &str {
+        (**self).name()
+    }
+
+    fn description(&self) -> &str {
+        (**self).description()
+    }
+}
+
+impl std::fmt::Debug for Device {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Thermometer(thermometer) => f
+                .debug_tuple("Thermometer")
+                .field(&thermometer.name())
+                .finish(),
+            Self::Plug(plug) => f.debug_tuple("Plug").field(&plug.name()).finish(),
+        }
+    }
+}
+
+impl PartialEq for Device {
+    fn eq(&self, other: &Device) -> bool {
+        self.name() == other.name()
+    }
+}
+
+impl From<Box<dyn SmartThermometer>> for Device {
+    fn from(thermometer: Box<dyn SmartThermometer>) -> Self {
+        Device::Thermometer(thermometer)
+    }
+}
+
+impl From<Box<dyn SmartPlug>> for Device {
+    fn from(plug: Box<dyn SmartPlug>) -> Self {
+        Device::Plug(plug)
+    }
 }
 
 impl Device {
@@ -58,96 +100,25 @@ impl Device {
     }
 }
 
-impl SmartDevice for Plug {
-    fn new<N, D>(name: N, description: D) -> Self
-    where
-        N: Into<String>,
-        D: Into<String>,
-    {
-        Self {
-            name: name.into(),
-            description: description.into(),
-        }
-    }
-
-    fn name(&self) -> &str {
-        &self.name
-    }
-
-    fn description(&self) -> &str {
-        &self.description
-    }
-}
-
-impl From<Plug> for Device {
-    fn from(plug: Plug) -> Self {
-        Device::Plug(plug)
-    }
-}
-
-impl SmartDevice for Thermometer {
-    fn new<N, D>(name: N, description: D) -> Self
-    where
-        N: Into<String>,
-        D: Into<String>,
-    {
-        Self {
-            name: name.into(),
-            description: description.into(),
-        }
-    }
-
-    fn name(&self) -> &str {
-        &self.name
-    }
-
-    fn description(&self) -> &str {
-        &self.description
-    }
-}
-
-impl From<Thermometer> for Device {
-    fn from(thermometer: Thermometer) -> Self {
-        Device::Thermometer(thermometer)
-    }
-}
-
-impl Plug {
-    /// Enable smart plug
-    pub fn on(&self) -> Result<()> {
-        Err(Error::NotImplemented)
-    }
-    /// Disable smart plug
-    pub fn off(&self) -> Result<()> {
-        Err(Error::NotImplemented)
-    }
-    /// Get current using power
-    pub fn current_power(&self) -> Result<f64> {
-        Err(Error::NotImplemented)
-    }
-}
-
-impl Thermometer {
-    /// Get current temperature
-    pub fn current_temperature(&self) -> Result<f64> {
-        Err(Error::NotImplemented)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
+    use crate::device::hardcoded_devices::{ExamplePlug, ExampleThermometer};
 
     #[test]
     fn device_stuff() {
-        let device = Device::new(Plug::new("plug", "plug in bedroom"));
+        let smart_plug: Box<dyn SmartPlug> = ExamplePlug::new("plug", "plug in bedroom").into();
+        let smart_thermometer: Box<dyn SmartThermometer> =
+            ExampleThermometer::new("thermometer", "thermometer in bedroom").into();
+
+        let device = Device::new(smart_plug);
         assert_eq!(device.name(), "plug");
         assert_eq!(device.description(), "plug in bedroom");
         assert!(matches!(&device, &Device::Plug { .. }));
 
-        let device = Device::new(Thermometer::new("thermometer", "thermometer in bedroom"));
+        let device = Device::new(smart_thermometer);
         assert_eq!(device.name(), "thermometer");
         assert_eq!(device.description(), "thermometer in bedroom");
         assert!(matches!(&device, &Device::Thermometer { .. }));
@@ -155,23 +126,31 @@ mod tests {
 
     #[test]
     fn plug_test() {
-        let plug = Plug::new("plug", "plug");
+        let plug = ExamplePlug::new("plug", "plug in bedroom");
+        let sample_power = 100.;
 
         let plug_res = plug.on();
-        assert!(matches!(plug_res, Err(Error::NotImplemented)));
+        assert!(matches!(plug_res, Ok(())));
+        assert!(plug.get_current_state());
 
         let plug_res = plug.off();
-        assert!(matches!(plug_res, Err(Error::NotImplemented)));
+        assert!(matches!(plug_res, Ok(())));
+        assert!(!plug.get_current_state());
 
-        let plug_res = plug.current_power();
-        assert!(matches!(plug_res, Err(Error::NotImplemented)));
+        plug.set_current_power(sample_power);
+
+        let plug_res = plug.current_power().unwrap();
+        assert_eq!(plug_res, sample_power);
     }
 
     #[test]
     fn thermometer_test() {
-        let thermometer = Thermometer::new("thermometer", "thermometer");
+        let thermometer = ExampleThermometer::new("thermometer", "thermometer");
+        let sample_themperature = 20.;
 
-        let thermometer_res = thermometer.current_temperature();
-        assert!(matches!(thermometer_res, Err(Error::NotImplemented)));
+        thermometer.set_current_temperature(sample_themperature);
+
+        let thermometer_res = thermometer.current_temperature().unwrap();
+        assert_eq!(thermometer_res, sample_themperature);
     }
 }
