@@ -49,8 +49,8 @@ impl Home {
     pub fn add_room(&mut self, room: Room) -> Result<()> {
         match self.rooms.entry(room.name().to_string()) {
             Entry::Occupied(_) => Err(Error::RoomAlreadyExists(room)),
-            entry @ Entry::Vacant(_) => {
-                entry.or_insert(room);
+            Entry::Vacant(entry) => {
+                entry.insert(room);
                 Ok(())
             }
         }
