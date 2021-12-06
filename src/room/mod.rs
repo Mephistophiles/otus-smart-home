@@ -45,8 +45,8 @@ impl Room {
     {
         match self.devices.entry(device.name().to_string()) {
             Entry::Occupied(_) => Err(Error::DeviceAlreadyExists(device.into())),
-            entry @ Entry::Vacant(_) => {
-                entry.or_insert_with(|| device.into());
+            Entry::Vacant(entry) => {
+                entry.insert(device.into());
                 Ok(())
             }
         }
