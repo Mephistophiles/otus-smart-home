@@ -2,7 +2,7 @@
 /// only for examples
 use std::cell::Cell;
 
-use crate::{SmartDevice, SmartPlug, SmartThermometer};
+use crate::{SmartDevice, SmartSocket, SmartThermometer};
 
 /// Thermometer for the tests
 pub(crate) struct ExampleThermometer {
@@ -12,7 +12,7 @@ pub(crate) struct ExampleThermometer {
 }
 
 /// Thermometer for the tests
-pub(crate) struct ExamplePlug {
+pub(crate) struct ExampleSocket {
     current_state: Cell<bool>,
     current_power: Cell<f64>,
     name: String,
@@ -43,13 +43,13 @@ impl ExampleThermometer {
     }
 }
 
-impl From<ExamplePlug> for Box<dyn SmartPlug> {
-    fn from(plug: ExamplePlug) -> Self {
-        Box::new(plug)
+impl From<ExampleSocket> for Box<dyn SmartSocket> {
+    fn from(socket: ExampleSocket) -> Self {
+        Box::new(socket)
     }
 }
 
-impl ExamplePlug {
+impl ExampleSocket {
     pub(crate) fn new<N, D>(name: N, description: D) -> Self
     where
         N: Into<String>,
@@ -88,7 +88,7 @@ impl SmartThermometer for ExampleThermometer {
     }
 }
 
-impl SmartDevice for ExamplePlug {
+impl SmartDevice for ExampleSocket {
     fn name(&self) -> &str {
         &self.name
     }
@@ -98,7 +98,7 @@ impl SmartDevice for ExamplePlug {
     }
 }
 
-impl SmartPlug for ExamplePlug {
+impl SmartSocket for ExampleSocket {
     fn on(&self) -> crate::error::Result<()> {
         self.current_state.set(true);
         Ok(())

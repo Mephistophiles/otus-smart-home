@@ -12,11 +12,11 @@ pub trait SmartThermometer: SmartDevice {
     fn current_temperature(&self) -> Result<f64>;
 }
 
-/// Smart plug (on/off power, get current using power)
-pub trait SmartPlug: SmartDevice {
-    /// Enable smart plug
+/// Smart socket (on/off power, get current using power)
+pub trait SmartSocket: SmartDevice {
+    /// Enable smart socket
     fn on(&self) -> Result<()>;
-    /// Disable smart plug
+    /// Disable smart socket
     fn off(&self) -> Result<()>;
     /// Get current using power
     fn current_power(&self) -> Result<f64>;
@@ -26,8 +26,8 @@ pub trait SmartPlug: SmartDevice {
 pub enum Device {
     /// smart thermometer
     Thermometer(Box<dyn SmartThermometer>),
-    /// smart plug
-    Plug(Box<dyn SmartPlug>),
+    /// smart socket
+    Socket(Box<dyn SmartSocket>),
 }
 
 /// Blanked impl for Box<dyn Smart**DeviceType**>
@@ -51,7 +51,7 @@ impl std::fmt::Debug for Device {
                 .debug_tuple("Thermometer")
                 .field(&thermometer.name())
                 .finish(),
-            Self::Plug(plug) => f.debug_tuple("Plug").field(&plug.name()).finish(),
+            Self::Socket(socket) => f.debug_tuple("Socket").field(&socket.name()).finish(),
         }
     }
 }
@@ -68,9 +68,9 @@ impl From<Box<dyn SmartThermometer>> for Device {
     }
 }
 
-impl From<Box<dyn SmartPlug>> for Device {
-    fn from(plug: Box<dyn SmartPlug>) -> Self {
-        Device::Plug(plug)
+impl From<Box<dyn SmartSocket>> for Device {
+    fn from(socket: Box<dyn SmartSocket>) -> Self {
+        Device::Socket(socket)
     }
 }
 
@@ -86,7 +86,7 @@ impl Device {
     /// Gets device name
     pub fn name(&self) -> &str {
         match self {
-            Device::Plug(plug) => plug.name(),
+            Device::Socket(socket) => socket.name(),
             Device::Thermometer(thermometer) => thermometer.name(),
         }
     }
@@ -94,7 +94,7 @@ impl Device {
     /// Gets device description
     pub fn description(&self) -> &str {
         match self {
-            Device::Plug(plug) => plug.description(),
+            Device::Socket(socket) => socket.description(),
             Device::Thermometer(thermometer) => thermometer.description(),
         }
     }
@@ -105,42 +105,43 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
-    use crate::device::hardcoded_devices::{ExamplePlug, ExampleThermometer};
+    use crate::device::hardcoded_devices::{ExampleSocket, ExampleThermometer};
 
     #[test]
     fn device_stuff() {
-        let smart_plug: Box<dyn SmartPlug> = ExamplePlug::new("plug", "plug in bedroom").into();
+        let smart_socket: Box<dyn SmartSocket> =
+            ExampleSocket::new("socket", "socket in the bedroom").into();
         let smart_thermometer: Box<dyn SmartThermometer> =
-            ExampleThermometer::new("thermometer", "thermometer in bedroom").into();
+            ExampleThermometer::new("thermometer", "thermometer in the bedroom").into();
 
-        let device = Device::new(smart_plug);
-        assert_eq!(device.name(), "plug");
-        assert_eq!(device.description(), "plug in bedroom");
-        assert!(matches!(&device, &Device::Plug { .. }));
+        let device = Device::new(smart_socket);
+        assert_eq!(device.name(), "socket");
+        assert_eq!(device.description(), "socket in the bedroom");
+        assert!(matches!(&device, &Device::Socket { .. }));
 
         let device = Device::new(smart_thermometer);
         assert_eq!(device.name(), "thermometer");
-        assert_eq!(device.description(), "thermometer in bedroom");
+        assert_eq!(device.description(), "thermometer in the bedroom");
         assert!(matches!(&device, &Device::Thermometer { .. }));
     }
 
     #[test]
-    fn plug_test() {
-        let plug = ExamplePlug::new("plug", "plug in bedroom");
+    fn socket_test() {
+        let socket = ExampleSocket::new("socket", "socket in the bedroom");
         let sample_power = 100.;
 
-        let plug_res = plug.on();
-        assert!(matches!(plug_res, Ok(())));
-        assert!(plug.get_current_state());
+        let socket_res = socket.on();
+        assert!(matches!(socket_res, Ok(())));
+        assert!(socket.get_current_state());
 
-        let plug_res = plug.off();
-        assert!(matches!(plug_res, Ok(())));
-        assert!(!plug.get_current_state());
+        let socket_res = socket.off();
+        assert!(matches!(socket_res, Ok(())));
+        assert!(!socket.get_current_state());
 
-        plug.set_current_power(sample_power);
+        socket.set_current_power(sample_power);
 
-        let plug_res = plug.current_power().unwrap();
-        assert_eq!(plug_res, sample_power);
+        let socket_res = socket.current_power().unwrap();
+        assert_eq!(socket_res, sample_power);
     }
 
     #[test]

@@ -6,7 +6,7 @@ mod home;
 mod room;
 
 pub use crate::{
-    device::{Device, SmartDevice, SmartPlug, SmartThermometer},
+    device::{Device, SmartDevice, SmartSocket, SmartThermometer},
     home::Home,
     room::Room,
 };
