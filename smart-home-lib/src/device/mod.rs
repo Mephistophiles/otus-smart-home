@@ -1,25 +1,14 @@
-use crate::error::Result;
 pub(crate) mod hardcoded_devices;
+
+pub mod socket;
+pub mod thermometer;
+
+pub use socket::SmartSocket;
+pub use thermometer::SmartThermometer;
 
 pub trait SmartDevice {
     fn name(&self) -> &str;
     fn description(&self) -> &str;
-}
-
-/// Smart thermometer (get themperature)
-pub trait SmartThermometer: SmartDevice {
-    /// Get current temperature
-    fn current_temperature(&self) -> Result<f64>;
-}
-
-/// Smart socket (on/off power, get current using power)
-pub trait SmartSocket: SmartDevice {
-    /// Enable smart socket
-    fn on(&self) -> Result<()>;
-    /// Disable smart socket
-    fn off(&self) -> Result<()>;
-    /// Get current using power
-    fn current_power(&self) -> Result<f64>;
 }
 
 /// Smart device
@@ -59,18 +48,6 @@ impl std::fmt::Debug for Device {
 impl PartialEq for Device {
     fn eq(&self, other: &Device) -> bool {
         self.name() == other.name()
-    }
-}
-
-impl From<Box<dyn SmartThermometer>> for Device {
-    fn from(thermometer: Box<dyn SmartThermometer>) -> Self {
-        Device::Thermometer(thermometer)
-    }
-}
-
-impl From<Box<dyn SmartSocket>> for Device {
-    fn from(socket: Box<dyn SmartSocket>) -> Self {
-        Device::Socket(socket)
     }
 }
 
