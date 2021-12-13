@@ -1,4 +1,7 @@
 [workspace]
 members = [
-    "smart-home-lib"
+    "smart-home-lib",
+    "smart-home-example",
+    "grpc-smart-socket",
+    "grpc-socket-server",
 ]

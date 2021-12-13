@@ -13,6 +13,9 @@ pub enum Error {
 
     #[error("Not yet implemented")]
     NotImplemented,
+
+    #[error("Internal error")]
+    InternalError,
 }
 
 /// Predefined result with Error

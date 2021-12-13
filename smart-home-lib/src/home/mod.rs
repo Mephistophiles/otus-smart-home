@@ -7,7 +7,7 @@ use crate::{
 
 /// Entry point for smart home control - Home
 /// ```
-/// use otus_smart_home::{Home, Room};
+/// use smart_home_lib::{Home, Room};
 ///
 /// let mut home = Home::new("Sweet Home".to_owned());
 /// assert_eq!(home.name(), "Sweet Home");
@@ -46,13 +46,10 @@ impl Home {
     }
 
     /// Add room to the Home
-    pub fn add_room(&mut self, room: Room) -> Result<()> {
+    pub fn add_room(&mut self, room: Room) -> Result<&mut Room> {
         match self.rooms.entry(room.name().to_string()) {
             Entry::Occupied(_) => Err(Error::RoomAlreadyExists(room)),
-            Entry::Vacant(entry) => {
-                entry.insert(room);
-                Ok(())
-            }
+            Entry::Vacant(entry) => Ok(entry.insert(room)),
         }
     }
 

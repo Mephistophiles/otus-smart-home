@@ -1,7 +1,7 @@
 //! This is a prototype library for Smart Home Control
 
 mod device;
-mod error;
+pub mod error;
 mod home;
 mod room;
 

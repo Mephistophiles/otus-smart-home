@@ -1,5 +1,5 @@
 [package]
-name = "smart-home-lib"
+name = "grpc-smart-socket"
 version = "0.1.0"
 edition = "2021"
 description = "Education project for OTUS"
@@ -10,8 +10,11 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 async-trait = "0.1"
-thiserror = "1.0.30"
+tonic = "0.6"
+prost = "0.9"
+tokio = "1.14"
 
-[dev-dependencies]
-pretty_assertions = "1.0.0"
-tokio = { version = "1.14", features = ["rt-multi-thread"] }
+smart-home-lib = { path = "../smart-home-lib" }
+
+[build-dependencies]
+tonic-build = "0.6"

@@ -102,33 +102,33 @@ mod tests {
         assert!(matches!(&device, &Device::Thermometer { .. }));
     }
 
-    #[test]
-    fn socket_test() {
+    #[tokio::test]
+    async fn socket_test() {
         let socket = ExampleSocket::new("socket", "socket in the bedroom");
         let sample_power = 100.;
 
-        let socket_res = socket.on();
+        let socket_res = socket.on().await;
         assert!(matches!(socket_res, Ok(())));
         assert!(socket.get_current_state());
 
-        let socket_res = socket.off();
+        let socket_res = socket.off().await;
         assert!(matches!(socket_res, Ok(())));
         assert!(!socket.get_current_state());
 
         socket.set_current_power(sample_power);
 
-        let socket_res = socket.current_power().unwrap();
+        let socket_res = socket.current_power().await.unwrap();
         assert_eq!(socket_res, sample_power);
     }
 
-    #[test]
-    fn thermometer_test() {
+    #[tokio::test]
+    async fn thermometer_test() {
         let thermometer = ExampleThermometer::new("thermometer", "thermometer");
         let sample_themperature = 20.;
 
         thermometer.set_current_temperature(sample_themperature);
 
-        let thermometer_res = thermometer.current_temperature().unwrap();
+        let thermometer_res = thermometer.current_temperature().await.unwrap();
         assert_eq!(thermometer_res, sample_themperature);
     }
 }
