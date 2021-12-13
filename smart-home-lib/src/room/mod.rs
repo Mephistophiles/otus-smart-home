@@ -6,7 +6,7 @@ use crate::error::{Error, Result};
 
 /// A room in the Home
 /// ```
-/// use otus_smart_home::{Device, Room};
+/// use smart_home_lib::{Device, Room};
 ///
 /// let mut room = Room::new("Room 1");
 ///

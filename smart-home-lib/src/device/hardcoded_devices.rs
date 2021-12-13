@@ -1,20 +1,25 @@
 #![allow(dead_code)]
 /// only for examples
-use std::cell::Cell;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Mutex,
+};
+
+use async_trait::async_trait;
 
 use crate::{SmartDevice, SmartSocket, SmartThermometer};
 
 /// Thermometer for the tests
 pub(crate) struct ExampleThermometer {
-    current_temperature: Cell<f64>,
+    current_temperature: Mutex<f64>,
     name: String,
     description: String,
 }
 
 /// Thermometer for the tests
 pub(crate) struct ExampleSocket {
-    current_state: Cell<bool>,
-    current_power: Cell<f64>,
+    current_state: AtomicBool,
+    current_power: Mutex<f64>,
     name: String,
     description: String,
 }
@@ -39,7 +44,7 @@ impl ExampleThermometer {
     }
 
     pub(crate) fn set_current_temperature(&self, current_temperature: f64) {
-        self.current_temperature.set(current_temperature)
+        *self.current_temperature.lock().unwrap() = current_temperature;
     }
 }
 
@@ -64,11 +69,11 @@ impl ExampleSocket {
     }
 
     pub(crate) fn set_current_power(&self, current_power: f64) {
-        self.current_power.set(current_power)
+        *self.current_power.lock().unwrap() = current_power;
     }
 
     pub(crate) fn get_current_state(&self) -> bool {
-        self.current_state.get()
+        self.current_state.load(Ordering::Relaxed)
     }
 }
 
@@ -82,9 +87,10 @@ impl SmartDevice for ExampleThermometer {
     }
 }
 
+#[async_trait]
 impl SmartThermometer for ExampleThermometer {
-    fn current_temperature(&self) -> crate::error::Result<f64> {
-        Ok(self.current_temperature.get())
+    async fn current_temperature(&self) -> crate::error::Result<f64> {
+        Ok(*self.current_temperature.lock().unwrap())
     }
 }
 
@@ -98,18 +104,19 @@ impl SmartDevice for ExampleSocket {
     }
 }
 
+#[async_trait]
 impl SmartSocket for ExampleSocket {
-    fn on(&self) -> crate::error::Result<()> {
-        self.current_state.set(true);
+    async fn on(&self) -> crate::error::Result<()> {
+        self.current_state.store(true, Ordering::Relaxed);
         Ok(())
     }
 
-    fn off(&self) -> crate::error::Result<()> {
-        self.current_state.set(false);
+    async fn off(&self) -> crate::error::Result<()> {
+        self.current_state.store(false, Ordering::Relaxed);
         Ok(())
     }
 
-    fn current_power(&self) -> crate::error::Result<f64> {
-        Ok(self.current_power.get())
+    async fn current_power(&self) -> crate::error::Result<f64> {
+        Ok(*self.current_power.lock().unwrap())
     }
 }
