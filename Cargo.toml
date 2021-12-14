@@ -4,4 +4,6 @@ members = [
     "smart-home-example",
     "grpc-smart-socket",
     "grpc-socket-server",
+    "udp-smart-thermometer",
+    "udp-thermometer-server",
 ]
