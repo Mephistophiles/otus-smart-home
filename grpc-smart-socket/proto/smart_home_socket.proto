@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package smart_home_socket;
+
+// The greeter service definition.
+service Socket {
+  // Sends the on command
+  rpc on(OnRequest) returns (OnResponse) {}
+  // Sends the off command
+  rpc off(OffRequest) returns (OffResponse) {}
+  // Gets the current power
+  rpc current_power(CurrentPowerRequest) returns (CurrentPowerResponse) {}
+}
+
+
+// On requests
+message OnRequest {}
+
+// On response
+message OnResponse {}
+
+// Off requests
+message OffRequest {}
+
+// Off response
+message OffResponse {}
+
+
+// Get current power request
+message CurrentPowerRequest {}
+
+// Get current power request
+message CurrentResponse {}
+
+// The response message containing the current power from the socket
+message CurrentPowerResponse {
+  double current_power = 1;
+}
