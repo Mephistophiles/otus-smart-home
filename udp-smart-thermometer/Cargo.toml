@@ -10,5 +10,7 @@ license = "MIT OR Apache-2.0"
 
 [dependencies]
 async-trait = "0.1"
-
 smart-home-lib = { path = "../smart-home-lib" }
+tokio = { version = "1.15", features = ["rt-multi-thread", "net"] }
+
+
