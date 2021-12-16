@@ -1,15 +1,16 @@
-use std::{
-    net::UdpSocket,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
-    },
-    thread::{self, JoinHandle},
-    time::Duration,
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
 };
 
 use async_trait::async_trait;
 use smart_home_lib::{SmartDevice, SmartThermometer};
+use tokio::{
+    net::UdpSocket,
+    sync::Mutex,
+    task::JoinHandle,
+    time::{self, Duration},
+};
 
 const LISTEN_ADDR: &str = "0.0.0.0:10000";
 
@@ -30,23 +31,25 @@ impl UdpSmartThermometer {
             let temperature = temperature.clone();
             let running = running.clone();
 
-            thread::spawn(move || {
-                let sock = UdpSocket::bind(LISTEN_ADDR).expect("a new socket");
-
-                sock.set_read_timeout(Some(Duration::from_secs(10)))
-                    .expect("set SO_RECV_TIMEOUT");
+            tokio::spawn(async move {
+                let sock = UdpSocket::bind(LISTEN_ADDR).await.expect("a new socket");
+                let sleep = time::sleep(Duration::from_secs(10));
+                tokio::pin!(sleep);
 
                 while (&*running).load(Ordering::Acquire) {
                     let mut buf = [0u8; 8];
 
-                    match sock.recv_from(&mut buf) {
-                        Ok((nbytes, _)) if nbytes == buf.len() => {
-                            *temperature.lock().unwrap() = f64::from_be_bytes(buf);
+                    tokio::select! {
+                        maybe_bytes = sock.recv_from(&mut buf) => {
+                            if let Ok((8, _)) = maybe_bytes {
+                                *temperature.lock().await = f64::from_be_bytes(buf);
+                            }
                         }
-                        _ => (),
-                    };
+                        _ = &mut sleep => {
+                        }
+                    }
 
-                    thread::sleep(Duration::from_secs(10));
+                    time::sleep(Duration::from_secs(10)).await;
                 }
             })
         });
@@ -74,7 +77,7 @@ impl SmartDevice for UdpSmartThermometer {
 #[async_trait]
 impl SmartThermometer for UdpSmartThermometer {
     async fn current_temperature(&self) -> smart_home_lib::error::Result<f64> {
-        Ok(*self.temperature.lock().unwrap())
+        Ok(*self.temperature.lock().await)
     }
 }
 
@@ -82,10 +85,10 @@ impl Drop for UdpSmartThermometer {
     fn drop(&mut self) {
         self.running.store(false, Ordering::Release);
 
-        self.join_handle
-            .take()
-            .unwrap()
-            .join()
-            .expect("Normal join");
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let handles = self.join_handle.take().unwrap();
+        rt.block_on(async move {
+            handles.await.ok();
+        });
     }
 }

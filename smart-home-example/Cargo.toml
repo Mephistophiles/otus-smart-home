@@ -12,4 +12,4 @@ license = "MIT OR Apache-2.0"
 grpc-smart-socket = { path = "../grpc-smart-socket" }
 udp-smart-thermometer = { path = "../udp-smart-thermometer" }
 smart-home-lib = { path = "../smart-home-lib" }
-tokio = { version = "1.14", features = ["rt-multi-thread"] }
+tokio = { version = "1.15", features = ["rt-multi-thread"] }
