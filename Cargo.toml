@@ -2,6 +2,7 @@
 members = [
     "smart-home-lib",
     "smart-home-example",
+    "smart-home-web",
     "grpc-socket-server",
     "udp-thermometer-server",
 ]

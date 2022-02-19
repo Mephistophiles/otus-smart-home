@@ -30,7 +30,7 @@ pub enum Error {
     NotImplemented,
 
     #[error("Internal error")]
-    InternalError,
+    Internal,
 }
 
 /// Predefined result with Error

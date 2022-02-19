@@ -26,7 +26,7 @@ impl GrpcSmartSocket {
             .expect("connect")
             .on(OnRequest {})
             .await
-            .map_err(|_| Error::InternalError)?;
+            .map_err(|_| Error::Internal)?;
         Ok(())
     }
 
@@ -36,7 +36,7 @@ impl GrpcSmartSocket {
             .expect("connect")
             .off(OffRequest {})
             .await
-            .map_err(|_| Error::InternalError)?;
+            .map_err(|_| Error::Internal)?;
         Ok(())
     }
 
@@ -46,7 +46,7 @@ impl GrpcSmartSocket {
             .expect("connect")
             .current_power(CurrentPowerRequest {})
             .await
-            .map_err(|_| Error::InternalError)?;
+            .map_err(|_| Error::Internal)?;
 
         Ok(response.into_inner().current_power)
     }
