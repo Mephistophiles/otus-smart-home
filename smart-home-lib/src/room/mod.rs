@@ -97,11 +97,14 @@ mod tests {
     use crate::device::hardcoded_devices::{ExampleSocket, ExampleThermometer};
 
     fn get_predefined_thermometer() -> Box<dyn SmartThermometer> {
-        ExampleThermometer::new("smart thermometer", "Handmade thermometer").into()
+        Box::new(ExampleThermometer::new(
+            "smart thermometer",
+            "Handmade thermometer",
+        ))
     }
 
     fn get_predefined_socket() -> Box<dyn SmartSocket> {
-        ExampleSocket::new("smart socket", "Handmade socket").into()
+        Box::new(ExampleSocket::new("smart socket", "Handmade socket"))
     }
 
     #[test]

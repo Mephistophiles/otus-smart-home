@@ -1,12 +1,13 @@
 use std::{thread, time::Duration};
 
 use grpc_smart_socket::GrpcSmartSocket;
-use smart_home_lib::{Home, Room, SmartSocket, SmartThermometer};
+use smart_home_lib::{Home, Room, SmartHub, SmartSocket, SmartThermometer};
 use udp_smart_thermometer::UdpSmartThermometer;
 
 #[tokio::main]
 async fn main() {
-    let mut home = Home::new("sweet home");
+    let mut hub = SmartHub::new();
+    let home = hub.add_home(Home::new("sweet home")).unwrap();
     let room = Room::new("bedroom");
     let socket =
         GrpcSmartSocket::new("socket", "smart socket", "http://127.0.0.1:50051".into()).await;

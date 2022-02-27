@@ -4,7 +4,7 @@ use crate::{error::Result, Device, SmartDevice};
 
 /// Smart thermometer (get themperature)
 #[async_trait]
-pub trait SmartThermometer: SmartDevice {
+pub trait SmartThermometer: SmartDevice + Send {
     /// Get current temperature
     async fn current_temperature(&self) -> Result<f64>;
 }

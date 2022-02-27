@@ -1,10 +1,25 @@
 use thiserror::Error;
 
-use crate::{Device, Room};
+use crate::{Device, Home, Room};
 
 /// Error kind
 #[derive(Error, Debug)]
 pub enum Error {
+    #[error("Socket implementation is already registered on this name")]
+    SocketImplAlreadyRegistered,
+
+    #[error("Socket implementation is not found")]
+    SocketImplNotFound,
+
+    #[error("Thermometer implementation is already registered on this name")]
+    ThermometerImplAlreadyRegistered,
+
+    #[error("Thermometer implementation is not found")]
+    ThermometerImplNotFound,
+
+    #[error("Home is already exists")]
+    HomeAlreadyExists(Home),
+
     #[error("Device is already exists")]
     DeviceAlreadyExists(Device),
 

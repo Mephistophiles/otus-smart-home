@@ -87,9 +87,11 @@ mod tests {
     #[test]
     fn device_stuff() {
         let smart_socket: Box<dyn SmartSocket> =
-            ExampleSocket::new("socket", "socket in the bedroom").into();
-        let smart_thermometer: Box<dyn SmartThermometer> =
-            ExampleThermometer::new("thermometer", "thermometer in the bedroom").into();
+            Box::new(ExampleSocket::new("socket", "socket in the bedroom"));
+        let smart_thermometer: Box<dyn SmartThermometer> = Box::new(ExampleThermometer::new(
+            "thermometer",
+            "thermometer in the bedroom",
+        ));
 
         let device = Device::new(smart_socket);
         assert_eq!(device.name(), "socket");
