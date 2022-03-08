@@ -1,16 +1,49 @@
-use async_trait::async_trait;
+use derivative::Derivative;
 
-use crate::{error::Result, Device, SmartDevice};
+use self::udp_smart_thermometer::UdpSmartThermometer;
+use crate::{error::Result, SmartDevice};
+
+mod udp_smart_thermometer;
 
 /// Smart thermometer (get themperature)
-#[async_trait]
-pub trait SmartThermometer: SmartDevice + Send {
-    /// Get current temperature
-    async fn current_temperature(&self) -> Result<f64>;
+#[derive(Derivative)]
+#[derivative(Debug)]
+pub struct SmartThermometer {
+    name: String,
+    description: String,
+    #[derivative(Debug = "ignore")]
+    thermometer: UdpSmartThermometer,
 }
 
-impl From<Box<dyn SmartThermometer>> for Device {
-    fn from(thermometer: Box<dyn SmartThermometer>) -> Self {
-        Device::Thermometer(thermometer)
+impl SmartThermometer {
+    pub async fn new(
+        name: impl Into<String>,
+        description: impl Into<String>,
+        server_addr: impl Into<String>,
+    ) -> Self {
+        Self {
+            name: name.into(),
+            description: description.into(),
+            thermometer: UdpSmartThermometer::new(server_addr.into()).await,
+        }
+    }
+
+    /// Get current temperature
+    pub async fn current_temperature(&self) -> Result<f64> {
+        self.thermometer.current_temperature().await
+    }
+}
+
+impl SmartDevice for SmartThermometer {
+    fn name(&self) -> &str {
+        &self.name
+    }
+
+    fn description(&self) -> &str {
+        &self.description
+    }
+
+    fn device_type(&self) -> &str {
+        "thermometer"
     }
 }

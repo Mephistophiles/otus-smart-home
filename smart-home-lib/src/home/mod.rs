@@ -63,6 +63,11 @@ impl Home {
         self.rooms.get(name)
     }
 
+    /// Get mutable room by name
+    pub fn room_mut(&mut self, name: &str) -> Option<&mut Room> {
+        self.rooms.get_mut(name)
+    }
+
     /// Get iterator over rooms
     pub fn room_iter(&self) -> impl Iterator<Item = &Room> {
         self.rooms.iter().map(|(_, room)| room)

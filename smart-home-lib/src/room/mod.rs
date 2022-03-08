@@ -39,16 +39,13 @@ impl Room {
     }
 
     /// Add device to the Room
-    pub fn add_device<T>(&mut self, device: T) -> Result<()>
+    pub fn add_device<T>(&mut self, device: T) -> Result<&mut Device>
     where
         T: SmartDevice + Into<Device>,
     {
         match self.devices.entry(device.name().to_string()) {
             Entry::Occupied(_) => Err(Error::DeviceAlreadyExists(device.into())),
-            Entry::Vacant(entry) => {
-                entry.insert(device.into());
-                Ok(())
-            }
+            Entry::Vacant(entry) => Ok(entry.insert(device.into())),
         }
     }
 
@@ -73,7 +70,7 @@ impl Room {
     }
 
     /// Get socket devices
-    pub fn socket_devices(&self) -> impl Iterator<Item = &Box<dyn SmartSocket>> {
+    pub fn socket_devices(&self) -> impl Iterator<Item = &SmartSocket> {
         self.device_iter().filter_map(|device| match device {
             Device::Socket(socket) => Some(socket),
             _ => None,
@@ -81,7 +78,7 @@ impl Room {
     }
 
     /// Get thermometer devices
-    pub fn thermometer_devices(&self) -> impl Iterator<Item = &Box<dyn SmartThermometer>> {
+    pub fn thermometer_devices(&self) -> impl Iterator<Item = &SmartThermometer> {
         self.device_iter().filter_map(|device| match device {
             Device::Thermometer(thermometer) => Some(thermometer),
             _ => None,
@@ -94,31 +91,32 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
-    use crate::device::hardcoded_devices::{ExampleSocket, ExampleThermometer};
 
-    fn get_predefined_thermometer() -> Box<dyn SmartThermometer> {
-        Box::new(ExampleThermometer::new(
+    async fn get_predefined_thermometer() -> SmartThermometer {
+        SmartThermometer::new(
             "smart thermometer",
             "Handmade thermometer",
-        ))
+            "https://localhost:80",
+        )
+        .await
     }
 
-    fn get_predefined_socket() -> Box<dyn SmartSocket> {
-        Box::new(ExampleSocket::new("smart socket", "Handmade socket"))
+    async fn get_predefined_socket() -> SmartSocket {
+        SmartSocket::new("smart socket", "Handmade socket", "localhost:81").await
     }
 
-    #[test]
-    fn example() {
+    #[tokio::test]
+    async fn example() {
         let mut room = Room::new("room");
         assert_eq!(room.device_iter().count(), 0);
         assert_eq!(room.device("NOT_FOUND"), None);
 
-        room.add_device(get_predefined_thermometer()).unwrap();
+        room.add_device(get_predefined_thermometer().await).unwrap();
 
         assert_eq!(room.device_iter().count(), 1);
         assert_eq!(
             room.device("smart thermometer"),
-            Some(&Device::Thermometer(get_predefined_thermometer()))
+            Some(&Device::Thermometer(get_predefined_thermometer().await))
         );
         assert!(room.device_iter().any(|d| d.name() == "smart thermometer"));
         assert!(room
@@ -128,12 +126,15 @@ mod tests {
         let smart_device = room.device_iter().find(|d| d.name() == "smart thermometer");
         let smart_device = format!("{:?}", smart_device);
 
-        assert_eq!(smart_device, "Some(Thermometer(\"smart thermometer\"))");
+        assert_eq!(
+            smart_device,
+            r#"Some(Thermometer(SmartThermometer { name: "smart thermometer", description: "Handmade thermometer" }))"#
+        );
 
-        room.add_device(get_predefined_socket()).unwrap();
+        room.add_device(get_predefined_socket().await).unwrap();
 
         assert!(matches!(
-            room.add_device(get_predefined_socket()),
+            room.add_device(get_predefined_socket().await),
             Err(Error::DeviceAlreadyExists(_))
         ));
 
@@ -141,12 +142,15 @@ mod tests {
         assert_eq!(room.device_iter_mut().count(), 2);
         assert_eq!(
             room.device("smart socket"),
-            Some(&Device::Socket(get_predefined_socket()))
+            Some(&Device::Socket(get_predefined_socket().await))
         );
         let smart_device = room.device_iter().find(|d| d.name() == "smart socket");
         let smart_device = format!("{:?}", smart_device);
 
-        assert_eq!(smart_device, "Some(Socket(\"smart socket\"))");
+        assert_eq!(
+            smart_device,
+            r#"Some(Socket(SmartSocket { name: "smart socket", description: "Handmade socket" }))"#
+        );
 
         assert_eq!(room.thermometer_devices().count(), 1);
         assert_eq!(room.socket_devices().count(), 1);

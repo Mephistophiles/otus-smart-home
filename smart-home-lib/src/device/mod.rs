@@ -1,5 +1,3 @@
-pub(crate) mod hardcoded_devices;
-
 pub mod socket;
 pub mod thermometer;
 
@@ -7,41 +5,32 @@ pub use socket::SmartSocket;
 pub use thermometer::SmartThermometer;
 
 pub trait SmartDevice {
+    /// Gets device name
     fn name(&self) -> &str;
+    /// Gets device description
     fn description(&self) -> &str;
+    /// Gets device type
+    fn device_type(&self) -> &str;
 }
 
 /// Smart device
+#[derive(Debug)]
 pub enum Device {
     /// smart thermometer
-    Thermometer(Box<dyn SmartThermometer>),
+    Thermometer(SmartThermometer),
     /// smart socket
-    Socket(Box<dyn SmartSocket>),
+    Socket(SmartSocket),
 }
 
-/// Blanked impl for Box<dyn Smart**DeviceType**>
-impl<T> SmartDevice for Box<T>
-where
-    T: SmartDevice + ?Sized,
-{
-    fn name(&self) -> &str {
-        (**self).name()
-    }
-
-    fn description(&self) -> &str {
-        (**self).description()
+impl From<SmartThermometer> for Device {
+    fn from(s: SmartThermometer) -> Self {
+        Device::Thermometer(s)
     }
 }
 
-impl std::fmt::Debug for Device {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Thermometer(thermometer) => f
-                .debug_tuple("Thermometer")
-                .field(&thermometer.name())
-                .finish(),
-            Self::Socket(socket) => f.debug_tuple("Socket").field(&socket.name()).finish(),
-        }
+impl From<SmartSocket> for Device {
+    fn from(s: SmartSocket) -> Self {
+        Device::Socket(s)
     }
 }
 
@@ -59,20 +48,27 @@ impl Device {
     {
         device.into()
     }
+}
 
-    /// Gets device name
-    pub fn name(&self) -> &str {
+impl SmartDevice for Device {
+    fn name(&self) -> &str {
         match self {
             Device::Socket(socket) => socket.name(),
             Device::Thermometer(thermometer) => thermometer.name(),
         }
     }
 
-    /// Gets device description
-    pub fn description(&self) -> &str {
+    fn description(&self) -> &str {
         match self {
             Device::Socket(socket) => socket.description(),
             Device::Thermometer(thermometer) => thermometer.description(),
+        }
+    }
+
+    fn device_type(&self) -> &str {
+        match self {
+            Device::Socket(socket) => socket.device_type(),
+            Device::Thermometer(thermometer) => thermometer.device_type(),
         }
     }
 }
@@ -82,16 +78,13 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
-    use crate::device::hardcoded_devices::{ExampleSocket, ExampleThermometer};
 
-    #[test]
-    fn device_stuff() {
-        let smart_socket: Box<dyn SmartSocket> =
-            Box::new(ExampleSocket::new("socket", "socket in the bedroom"));
-        let smart_thermometer: Box<dyn SmartThermometer> = Box::new(ExampleThermometer::new(
-            "thermometer",
-            "thermometer in the bedroom",
-        ));
+    #[tokio::test(flavor = "multi_thread", worker_threads = 1)]
+    async fn device_stuff() {
+        let smart_socket =
+            SmartSocket::new("socket", "socket in the bedroom", "https://localhost:8080").await;
+        let smart_thermometer =
+            SmartThermometer::new("thermometer", "thermometer in the bedroom", "0.0.0.0:81").await;
 
         let device = Device::new(smart_socket);
         assert_eq!(device.name(), "socket");
@@ -102,35 +95,5 @@ mod tests {
         assert_eq!(device.name(), "thermometer");
         assert_eq!(device.description(), "thermometer in the bedroom");
         assert!(matches!(&device, &Device::Thermometer { .. }));
-    }
-
-    #[tokio::test]
-    async fn socket_test() {
-        let socket = ExampleSocket::new("socket", "socket in the bedroom");
-        let sample_power = 100.;
-
-        let socket_res = socket.on().await;
-        assert!(matches!(socket_res, Ok(())));
-        assert!(socket.get_current_state());
-
-        let socket_res = socket.off().await;
-        assert!(matches!(socket_res, Ok(())));
-        assert!(!socket.get_current_state());
-
-        socket.set_current_power(sample_power);
-
-        let socket_res = socket.current_power().await.unwrap();
-        assert_eq!(socket_res, sample_power);
-    }
-
-    #[tokio::test]
-    async fn thermometer_test() {
-        let thermometer = ExampleThermometer::new("thermometer", "thermometer");
-        let sample_themperature = 20.;
-
-        thermometer.set_current_temperature(sample_themperature);
-
-        let thermometer_res = thermometer.current_temperature().await.unwrap();
-        assert_eq!(thermometer_res, sample_themperature);
     }
 }
