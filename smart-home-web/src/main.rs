@@ -1,4 +1,4 @@
-use actix_web::{web, App, HttpServer};
+use actix_web::{middleware::Logger, web, App, HttpServer};
 use types::{WebDevice, WebHome, WebRoom};
 
 use self::{
@@ -25,26 +25,29 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(move || {
         let ctx = ctx.clone();
 
-        App::new().app_data(web::Data::new(ctx)).service(
-            web::scope("/home")
-                .service(read_home_list)
-                .service(read_home)
-                .service(create_home)
-                .service(delete_home)
-                .service(read_room_list)
-                .service(read_room)
-                .service(create_room)
-                .service(delete_room)
-                .service(read_device_list)
-                .service(read_device)
-                .service(create_thermometer)
-                .service(create_socket)
-                .service(delete_device)
-                .service(get_current_temperature)
-                .service(get_current_power)
-                .service(socket_on)
-                .service(socket_off),
-        )
+        App::new()
+            .wrap(Logger::default())
+            .app_data(web::Data::new(ctx))
+            .service(
+                web::scope("/home")
+                    .service(read_home_list)
+                    .service(read_home)
+                    .service(create_home)
+                    .service(delete_home)
+                    .service(read_room_list)
+                    .service(read_room)
+                    .service(create_room)
+                    .service(delete_room)
+                    .service(read_device_list)
+                    .service(read_device)
+                    .service(create_thermometer)
+                    .service(create_socket)
+                    .service(delete_device)
+                    .service(get_current_temperature)
+                    .service(get_current_power)
+                    .service(socket_on)
+                    .service(socket_off),
+            )
     })
     .bind(("127.0.0.1", 4080))?
     .run()

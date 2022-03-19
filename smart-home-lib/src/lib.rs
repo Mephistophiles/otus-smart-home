@@ -21,7 +21,7 @@ pub use crate::{
     room::Room,
 };
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct SmartHub {
     home_list: HashMap<Name, Home>,
 }

@@ -4,6 +4,8 @@ members = [
     "smart-home-lib-sys",
     "smart-home-example",
     "smart-home-web",
+    "smart-home-gui",
     "grpc-socket-server",
     "udp-thermometer-server",
 ]
+resolver = "2"
