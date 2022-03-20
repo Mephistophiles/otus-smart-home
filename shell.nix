@@ -1,8 +1,16 @@
 { pkgs ? import <nixpkgs> {} }:
 with pkgs;
-pkgs.mkShell {
-  nativeBuildInputs = [ pkg-config python3 protobuf rustfmt cmake ];
-  buildInputs = [ openssl dbus zlib libgit2 xorg.libxcb ];
-  PROTOC = "${protobuf}/bin/protoc";
-  shellHook = ''export CFG_DISABLE_CROSS_TESTS=1'';
+mkShell rec {
+    name = "shell";
+    nativeBuildInputs = [pkgconfig protobuf cmake gdb ];
+    buildInputs = [
+        openssl freetype expat
+        vulkan-loader vulkan-tools
+        wayland wayland-protocols libxkbcommon swiftshader
+    ] ++ (with xorg; [
+        libX11 libXcursor libXrandr libXi
+    ]);
+    shellHook = ''
+        export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${lib.makeLibraryPath buildInputs}";
+    '';
 }
