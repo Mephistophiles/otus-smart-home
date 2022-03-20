@@ -1271,6 +1271,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "smart-home-lib-sys"
+version = "0.1.0"
+dependencies = [
+ "smart-home-lib",
+ "tokio",
+]
+
+[[package]]
 name = "socket-server"
 version = "0.1.0"
 dependencies = [
