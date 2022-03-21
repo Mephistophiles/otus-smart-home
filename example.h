@@ -4,16 +4,34 @@
 #include <stdlib.h>
 
 typedef enum ReturnCode {
-  Success = 0,
-  Fail = -1,
+	Success = 0,
+	Fail = -1,
 } ReturnCode;
 
-struct Handle;
+typedef struct Option_CString Option_CString;
+typedef struct Handle Handle;
 typedef struct Home Home;
 typedef struct Room Room;
 typedef struct Device Device;
 typedef struct SmartThermometer SmartThermometer;
 typedef struct SmartSocket SmartSocket;
+
+typedef struct HandleIter {
+	struct Handle *handle;
+	uintptr_t cursor;
+} HandleIter;
+
+typedef struct HandleRoomIter {
+	struct Handle *handle;
+	Home *home;
+	uintptr_t cursor;
+} HandleRoomIter;
+
+typedef struct HandleDeviceIter {
+	struct Handle *handle;
+	Room *room;
+	uintptr_t cursor;
+} HandleDeviceIter;
 
 /**
  * get new smart hub
@@ -65,7 +83,16 @@ enum ReturnCode smart_home_del_home(struct Handle *handle, const char *name);
 Home *smart_home_get_home(struct Handle *handle, const char *name);
 
 /**
- * Get list of all home names in hub
+ * Get home count
+ *
+ * # Safety
+ *
+ * handle gets from smart_home_new()
+ */
+uintptr_t smart_home_get_home_size(struct Handle *handle);
+
+/**
+ * Get iterator over homes
  *
  * # Safety
  *
@@ -73,7 +100,22 @@ Home *smart_home_get_home(struct Handle *handle, const char *name);
  *
  * * `handle`: smart hub handle
  */
-char *const *smart_home_get_home_list(struct Handle *handle);
+struct HandleIter smart_home_get_home_iter(struct Handle *handle);
+
+/**
+ * Get list of all home names in hub
+ *
+ * # Safety
+ *
+ * handle gets from smart_home_new()
+ *
+ * # Warning
+ *
+ * This function returns borrowed pointer, use copy name before next call
+ *
+ * * `handle`: smart hub handle
+ */
+const char *smart_home_get_home_next(struct HandleIter *iter);
 
 /**
  * Adds a new room to home
@@ -112,7 +154,7 @@ enum ReturnCode smart_home_del_room(Home *handle, const char *name);
 Room *smart_home_get_room(Home *handle, const char *name);
 
 /**
- * Gets a room list from home by name
+ * Gets a room count in room
  *
  * # Safety
  *
@@ -120,7 +162,29 @@ Room *smart_home_get_room(Home *handle, const char *name);
  *
  * * `handle`: home handle
  */
-char *const *smart_home_get_room_list(Home *handle);
+uintptr_t smart_home_get_room_size(Home *handle);
+
+/**
+ * Gets a room iterator
+ *
+ * # Safety
+ *
+ * Home gets from smart_home_get_home()
+ *
+ * * `handle`: home handle
+ */
+struct HandleRoomIter smart_home_get_room_iter(struct Handle *handle, Home *home);
+
+/**
+ * Gets a room list from home
+ *
+ * # Safety
+ *
+ * Home gets from smart_home_get_home()
+ *
+ * * `handle`: home handle
+ */
+const char *smart_home_get_room_next(struct HandleRoomIter *iter);
 
 /**
  * Adds a new thermometer to room
@@ -183,6 +247,28 @@ enum ReturnCode smart_home_del_device(Room *handle, const char *name);
 Device *smart_home_get_device(Room *handle, const char *name);
 
 /**
+ * Gets all thermometers size
+ *
+ * # Safety
+ *
+ * Room gets from smart_home_get_room()
+ *
+ * * `handle`: room handle
+ */
+uintptr_t smart_home_get_thermometer_size(const Room *handle);
+
+/**
+ * Gets all thermometers iter
+ *
+ * # Safety
+ *
+ * Room gets from smart_home_get_room()
+ *
+ * * `handle`: room handle
+ */
+struct HandleDeviceIter smart_home_get_thermometer_iter(struct Handle *handle, Room *room);
+
+/**
  * Gets all thermometers in room
  *
  * # Safety
@@ -191,7 +277,29 @@ Device *smart_home_get_device(Room *handle, const char *name);
  *
  * * `handle`: room handle
  */
-SmartThermometer **smart_home_get_thermometer_list(Room *handle);
+const SmartThermometer *smart_home_get_thermometer_next(struct HandleDeviceIter *handle);
+
+/**
+ * Gets all sockets size
+ *
+ * # Safety
+ *
+ * Room gets from smart_home_get_room()
+ *
+ * * `handle`: room handle
+ */
+uintptr_t smart_home_get_socket_size(const Room *handle);
+
+/**
+ * Gets all sockets iter
+ *
+ * # Safety
+ *
+ * Room gets from smart_home_get_room()
+ *
+ * * `handle`: room handle
+ */
+struct HandleDeviceIter smart_home_get_socket_iter(struct Handle *handle, Room *room);
 
 /**
  * Gets all sockets in room
@@ -202,7 +310,7 @@ SmartThermometer **smart_home_get_thermometer_list(Room *handle);
  *
  * * `handle`: room handle
  */
-SmartSocket **smart_home_get_socket_list(Room *handle);
+const SmartSocket *smart_home_get_socket_next(struct HandleDeviceIter *handle);
 
 /**
  * Get thermometer name
@@ -213,7 +321,7 @@ SmartSocket **smart_home_get_socket_list(Room *handle);
  *
  * * `handle`: room handle
  */
-const char *smart_home_get_thermometer_name(SmartThermometer *handle);
+const char *smart_home_get_thermometer_name(struct Handle *handle, const SmartThermometer *device);
 
 /**
  * Get thermometer description
@@ -224,7 +332,8 @@ const char *smart_home_get_thermometer_name(SmartThermometer *handle);
  *
  * * `handle`: room handle
  */
-const char *smart_home_get_thermometer_description(SmartThermometer *handle);
+const char *smart_home_get_thermometer_description(struct Handle *handle,
+                                                   const SmartThermometer *device);
 
 /**
  * Get thermometer temperature
@@ -235,7 +344,8 @@ const char *smart_home_get_thermometer_description(SmartThermometer *handle);
  *
  * * `handle`: room handle
  */
-double smart_home_get_thermometer_temperature(struct Handle *handle, SmartThermometer *device);
+double smart_home_get_thermometer_temperature(struct Handle *handle,
+                                              const SmartThermometer *device);
 
 /**
  * Get socket name
@@ -246,7 +356,7 @@ double smart_home_get_thermometer_temperature(struct Handle *handle, SmartThermo
  *
  * * `handle`: room handle
  */
-const char *smart_home_get_socket_name(SmartSocket *handle);
+const char *smart_home_get_socket_name(struct Handle *handle, const SmartSocket *device);
 
 /**
  * Get socket description
@@ -257,7 +367,7 @@ const char *smart_home_get_socket_name(SmartSocket *handle);
  *
  * * `handle`: room handle
  */
-const char *smart_home_get_socket_description(SmartSocket *handle);
+const char *smart_home_get_socket_description(struct Handle *handle, const SmartSocket *device);
 
 /**
  * Get socket power
@@ -268,7 +378,7 @@ const char *smart_home_get_socket_description(SmartSocket *handle);
  *
  * * `handle`: room handle
  */
-double smart_home_get_socket_power(struct Handle *handle, SmartSocket *device);
+double smart_home_get_socket_power(struct Handle *handle, const SmartSocket *device);
 
 /**
  * Turn on socket
@@ -279,7 +389,7 @@ double smart_home_get_socket_power(struct Handle *handle, SmartSocket *device);
  *
  * * `handle`: room handle
  */
-enum ReturnCode smart_home_socket_on(struct Handle *handle, SmartSocket *device);
+enum ReturnCode smart_home_socket_on(struct Handle *handle, const SmartSocket *device);
 
 /**
  * Turn off socket
@@ -290,4 +400,4 @@ enum ReturnCode smart_home_socket_on(struct Handle *handle, SmartSocket *device)
  *
  * * `handle`: room handle
  */
-enum ReturnCode smart_home_socket_off(struct Handle *handle, SmartSocket *device);
+enum ReturnCode smart_home_socket_off(struct Handle *handle, const SmartSocket *device);

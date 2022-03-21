@@ -7,8 +7,32 @@ use smart_home_lib::{Device, Home, Room, SmartDevice, SmartHub, SmartSocket, Sma
 
 #[repr(C)]
 pub struct Handle {
-    hub: SmartHub,
+    controller: SmartHub,
+    home_name_buffer: Option<CString>,
+    room_name_buffer: Option<CString>,
+    device_name_buffer: Option<CString>,
+    device_desc_buffer: Option<CString>,
     rt: tokio::runtime::Runtime,
+}
+
+#[repr(C)]
+pub struct HandleIter {
+    handle: *mut Handle,
+    cursor: usize,
+}
+
+#[repr(C)]
+pub struct HandleRoomIter {
+    handle: *mut Handle,
+    home: *mut Home,
+    cursor: usize,
+}
+
+#[repr(C)]
+pub struct HandleDeviceIter {
+    handle: *mut Handle,
+    room: *mut Room,
+    cursor: usize,
 }
 
 #[repr(C)]
@@ -21,7 +45,11 @@ pub enum ReturnCode {
 /// get new smart hub
 pub extern "C" fn smart_home_new() -> *mut Handle {
     let handle = Handle {
-        hub: SmartHub::new(),
+        controller: SmartHub::new(),
+        room_name_buffer: None,
+        home_name_buffer: None,
+        device_name_buffer: None,
+        device_desc_buffer: None,
         rt: tokio::runtime::Runtime::new().unwrap(),
     };
 
@@ -54,7 +82,7 @@ pub unsafe extern "C" fn smart_home_add_home(
     let handle = &mut *handle;
     let home_name = CStr::from_ptr(name).to_str().unwrap();
 
-    match handle.hub.add_home(Home::new(home_name)) {
+    match handle.controller.add_home(Home::new(home_name)) {
         Ok(home) => home as *mut Home,
         Err(_) => std::ptr::null_mut(),
     }
@@ -76,7 +104,7 @@ pub unsafe extern "C" fn smart_home_del_home(
     let handle = &mut *handle;
     let home_name = CStr::from_ptr(name).to_str().unwrap();
 
-    match handle.hub.del_home(home_name) {
+    match handle.controller.del_home(home_name) {
         Some(_) => ReturnCode::Success,
         None => ReturnCode::Fail,
     }
@@ -98,10 +126,34 @@ pub unsafe extern "C" fn smart_home_get_home(
     let handle = &mut *handle;
     let home_name = CStr::from_ptr(name).to_str().unwrap();
 
-    match handle.hub.get_home_mut(home_name) {
+    match handle.controller.get_home_mut(home_name) {
         Some(home) => home as *mut Home,
         None => std::ptr::null_mut(),
     }
+}
+
+#[no_mangle]
+/// Get home count
+///
+/// # Safety
+///
+/// handle gets from smart_home_new()
+pub unsafe extern "C" fn smart_home_get_home_size(handle: *mut Handle) -> usize {
+    let handle = &mut *handle;
+
+    handle.controller.iter().count()
+}
+
+#[no_mangle]
+/// Get iterator over homes
+///
+/// # Safety
+///
+/// handle gets from smart_home_new()
+///
+/// * `handle`: smart hub handle
+pub unsafe extern "C" fn smart_home_get_home_iter(handle: *mut Handle) -> HandleIter {
+    HandleIter { handle, cursor: 0 }
 }
 
 #[no_mangle]
@@ -111,23 +163,25 @@ pub unsafe extern "C" fn smart_home_get_home(
 ///
 /// handle gets from smart_home_new()
 ///
+/// # Warning
+///
+/// This function returns borrowed pointer, use copy name before next call
+///
 /// * `handle`: smart hub handle
-pub unsafe extern "C" fn smart_home_get_home_list(handle: *mut Handle) -> *const *mut c_char {
-    let handle = &mut *handle;
+pub unsafe extern "C" fn smart_home_get_home_next(iter: *mut HandleIter) -> *const c_char {
+    let iter = &mut *iter;
+    let handle = &mut *iter.handle;
 
-    let mut home_list: Vec<*mut c_char> = handle
-        .hub
-        .iter()
-        .map(|home| CString::new(home.name()).unwrap().into_raw())
-        .collect();
+    let home = match handle.controller.iter().nth(iter.cursor) {
+        Some(home) => home,
+        None => return std::ptr::null(),
+    };
 
-    home_list.push(std::ptr::null_mut());
+    iter.cursor += 1;
 
-    let ptr = home_list.as_ptr();
+    handle.home_name_buffer = Some(CString::new(home.name()).unwrap());
 
-    std::mem::forget(home_list);
-
-    ptr
+    handle.home_name_buffer.as_ref().unwrap().as_ptr()
 }
 
 #[no_mangle]
@@ -188,28 +242,61 @@ pub unsafe extern "C" fn smart_home_get_room(handle: *mut Home, name: *const c_c
 }
 
 #[no_mangle]
-/// Gets a room list from home by name
+/// Gets a room count in room
 ///
 /// # Safety
 ///
 /// Home gets from smart_home_get_home()
 ///
 /// * `handle`: home handle
-pub unsafe extern "C" fn smart_home_get_room_list(handle: *mut Home) -> *const *mut c_char {
+pub unsafe extern "C" fn smart_home_get_room_size(handle: *mut Home) -> usize {
     let home = &mut *handle;
 
-    let mut room_list: Vec<*mut c_char> = home
-        .room_iter_mut()
-        .map(|room| CString::new(room.name()).unwrap().into_raw())
-        .collect();
+    home.room_iter().count()
+}
 
-    room_list.push(std::ptr::null_mut());
+#[no_mangle]
+/// Gets a room iterator
+///
+/// # Safety
+///
+/// Home gets from smart_home_get_home()
+///
+/// * `handle`: home handle
+pub unsafe extern "C" fn smart_home_get_room_iter(
+    handle: *mut Handle,
+    home: *mut Home,
+) -> HandleRoomIter {
+    HandleRoomIter {
+        handle,
+        home,
+        cursor: 0,
+    }
+}
 
-    let ptr = room_list.as_ptr();
+#[no_mangle]
+/// Gets a room list from home
+///
+/// # Safety
+///
+/// Home gets from smart_home_get_home()
+///
+/// * `handle`: home handle
+pub unsafe extern "C" fn smart_home_get_room_next(iter: *mut HandleRoomIter) -> *const c_char {
+    let iter = &mut *iter;
+    let handle = &mut *iter.handle;
+    let home = &mut *iter.home;
 
-    std::mem::forget(room_list);
+    let room = match home.room_iter().nth(iter.cursor) {
+        Some(room) => room,
+        None => return std::ptr::null(),
+    };
 
-    ptr
+    iter.cursor += 1;
+
+    handle.room_name_buffer = Some(CString::new(room.name()).unwrap());
+
+    handle.room_name_buffer.as_ref().unwrap().as_ptr()
 }
 
 #[no_mangle]
@@ -331,6 +418,38 @@ pub unsafe extern "C" fn smart_home_get_device(
 }
 
 #[no_mangle]
+/// Gets all thermometers size
+///
+/// # Safety
+///
+/// Room gets from smart_home_get_room()
+///
+/// * `handle`: room handle
+pub unsafe extern "C" fn smart_home_get_thermometer_size(handle: *const Room) -> usize {
+    let room = &*handle;
+    room.thermometer_devices().count()
+}
+
+#[no_mangle]
+/// Gets all thermometers iter
+///
+/// # Safety
+///
+/// Room gets from smart_home_get_room()
+///
+/// * `handle`: room handle
+pub unsafe extern "C" fn smart_home_get_thermometer_iter(
+    handle: *mut Handle,
+    room: *mut Room,
+) -> HandleDeviceIter {
+    HandleDeviceIter {
+        handle,
+        room,
+        cursor: 0,
+    }
+}
+
+#[no_mangle]
 /// Gets all thermometers in room
 ///
 /// # Safety
@@ -338,26 +457,52 @@ pub unsafe extern "C" fn smart_home_get_device(
 /// Room gets from smart_home_get_room()
 ///
 /// * `handle`: room handle
-pub unsafe extern "C" fn smart_home_get_thermometer_list(
-    handle: *mut Room,
-) -> *mut *mut SmartThermometer {
-    let room = &mut *handle;
-    let mut list: Vec<*mut SmartThermometer> = room
-        .device_iter_mut()
-        .filter_map(|t| match t {
-            Device::Thermometer(x) => Some(x),
-            _ => None,
-        })
-        .map(|t| t as *mut SmartThermometer)
-        .collect();
+pub unsafe extern "C" fn smart_home_get_thermometer_next(
+    handle: *mut HandleDeviceIter,
+) -> *const SmartThermometer {
+    let handle = &mut *handle;
+    let room = &*handle.room;
 
-    list.push(std::ptr::null_mut());
+    let device = match room.thermometer_devices().nth(handle.cursor) {
+        Some(device) => device,
+        None => return std::ptr::null(),
+    };
 
-    let ptr = list.as_mut_ptr();
+    handle.cursor += 1;
 
-    std::mem::forget(list);
+    device as *const SmartThermometer
+}
 
-    ptr
+#[no_mangle]
+/// Gets all sockets size
+///
+/// # Safety
+///
+/// Room gets from smart_home_get_room()
+///
+/// * `handle`: room handle
+pub unsafe extern "C" fn smart_home_get_socket_size(handle: *const Room) -> usize {
+    let room = &*handle;
+    room.socket_devices().count()
+}
+
+#[no_mangle]
+/// Gets all sockets iter
+///
+/// # Safety
+///
+/// Room gets from smart_home_get_room()
+///
+/// * `handle`: room handle
+pub unsafe extern "C" fn smart_home_get_socket_iter(
+    handle: *mut Handle,
+    room: *mut Room,
+) -> HandleDeviceIter {
+    HandleDeviceIter {
+        handle,
+        room,
+        cursor: 0,
+    }
 }
 
 #[no_mangle]
@@ -368,24 +513,20 @@ pub unsafe extern "C" fn smart_home_get_thermometer_list(
 /// Room gets from smart_home_get_room()
 ///
 /// * `handle`: room handle
-pub unsafe extern "C" fn smart_home_get_socket_list(handle: *mut Room) -> *mut *mut SmartSocket {
-    let room = &mut *handle;
-    let mut list: Vec<*mut SmartSocket> = room
-        .device_iter_mut()
-        .filter_map(|t| match t {
-            Device::Socket(x) => Some(x),
-            _ => None,
-        })
-        .map(|t| t as *mut SmartSocket)
-        .collect();
+pub unsafe extern "C" fn smart_home_get_socket_next(
+    handle: *mut HandleDeviceIter,
+) -> *const SmartSocket {
+    let handle = &mut *handle;
+    let room = &*handle.room;
 
-    list.push(std::ptr::null_mut());
+    let device = match room.socket_devices().nth(handle.cursor) {
+        Some(device) => device,
+        None => return std::ptr::null(),
+    };
 
-    let ptr = list.as_mut_ptr();
+    handle.cursor += 1;
 
-    std::mem::forget(list);
-
-    ptr
+    device as *const SmartSocket
 }
 
 #[no_mangle]
@@ -397,17 +538,15 @@ pub unsafe extern "C" fn smart_home_get_socket_list(handle: *mut Room) -> *mut *
 ///
 /// * `handle`: room handle
 pub unsafe extern "C" fn smart_home_get_thermometer_name(
-    handle: *mut SmartThermometer,
+    handle: *mut Handle,
+    device: *const SmartThermometer,
 ) -> *const c_char {
-    let device = &mut *handle;
+    let handle = &mut *handle;
+    let device = &*device;
 
-    let str = CString::new(device.name()).unwrap();
+    handle.device_name_buffer = Some(CString::new(device.name()).unwrap());
 
-    let ptr = str.as_ptr();
-
-    std::mem::forget(str);
-
-    ptr
+    handle.device_name_buffer.as_ref().unwrap().as_ptr()
 }
 
 #[no_mangle]
@@ -419,17 +558,15 @@ pub unsafe extern "C" fn smart_home_get_thermometer_name(
 ///
 /// * `handle`: room handle
 pub unsafe extern "C" fn smart_home_get_thermometer_description(
-    handle: *mut SmartThermometer,
+    handle: *mut Handle,
+    device: *const SmartThermometer,
 ) -> *const c_char {
-    let device = &mut *handle;
+    let handle = &mut *handle;
+    let device = &*device;
 
-    let str = CString::new(device.description()).unwrap();
+    handle.device_desc_buffer = Some(CString::new(device.description()).unwrap());
 
-    let ptr = str.as_ptr();
-
-    std::mem::forget(str);
-
-    ptr
+    handle.device_desc_buffer.as_ref().unwrap().as_ptr()
 }
 
 #[no_mangle]
@@ -442,10 +579,10 @@ pub unsafe extern "C" fn smart_home_get_thermometer_description(
 /// * `handle`: room handle
 pub unsafe extern "C" fn smart_home_get_thermometer_temperature(
     handle: *mut Handle,
-    device: *mut SmartThermometer,
+    device: *const SmartThermometer,
 ) -> f64 {
     let handle = &mut *handle;
-    let device = &mut *device;
+    let device = &*device;
 
     handle
         .rt
@@ -461,16 +598,16 @@ pub unsafe extern "C" fn smart_home_get_thermometer_temperature(
 /// Room gets from smart_home_get_room()
 ///
 /// * `handle`: room handle
-pub unsafe extern "C" fn smart_home_get_socket_name(handle: *mut SmartSocket) -> *const c_char {
-    let device = &mut *handle;
+pub unsafe extern "C" fn smart_home_get_socket_name(
+    handle: *mut Handle,
+    device: *const SmartSocket,
+) -> *const c_char {
+    let handle = &mut *handle;
+    let device = &*device;
 
-    let str = CString::new(device.name()).unwrap();
+    handle.device_name_buffer = Some(CString::new(device.name()).unwrap());
 
-    let ptr = str.as_ptr();
-
-    std::mem::forget(str);
-
-    ptr
+    handle.device_name_buffer.as_ref().unwrap().as_ptr()
 }
 
 #[no_mangle]
@@ -482,17 +619,15 @@ pub unsafe extern "C" fn smart_home_get_socket_name(handle: *mut SmartSocket) ->
 ///
 /// * `handle`: room handle
 pub unsafe extern "C" fn smart_home_get_socket_description(
-    handle: *mut SmartSocket,
+    handle: *mut Handle,
+    device: *const SmartSocket,
 ) -> *const c_char {
-    let device = &mut *handle;
+    let handle = &mut *handle;
+    let device = &*device;
 
-    let str = CString::new(device.description()).unwrap();
+    handle.device_desc_buffer = Some(CString::new(device.description()).unwrap());
 
-    let ptr = str.as_ptr();
-
-    std::mem::forget(str);
-
-    ptr
+    handle.device_desc_buffer.as_ref().unwrap().as_ptr()
 }
 
 #[no_mangle]
@@ -505,10 +640,10 @@ pub unsafe extern "C" fn smart_home_get_socket_description(
 /// * `handle`: room handle
 pub unsafe extern "C" fn smart_home_get_socket_power(
     handle: *mut Handle,
-    device: *mut SmartSocket,
+    device: *const SmartSocket,
 ) -> f64 {
     let handle = &mut *handle;
-    let device = &mut *device;
+    let device = &*device;
 
     handle
         .rt
@@ -525,10 +660,10 @@ pub unsafe extern "C" fn smart_home_get_socket_power(
 /// * `handle`: room handle
 pub unsafe extern "C" fn smart_home_socket_on(
     handle: *mut Handle,
-    device: *mut SmartSocket,
+    device: *const SmartSocket,
 ) -> ReturnCode {
     let handle = &mut *handle;
-    let device = &mut *device;
+    let device = &*device;
 
     handle.rt.block_on(async {
         match device.on().await {
@@ -548,10 +683,10 @@ pub unsafe extern "C" fn smart_home_socket_on(
 /// * `handle`: room handle
 pub unsafe extern "C" fn smart_home_socket_off(
     handle: *mut Handle,
-    device: *mut SmartSocket,
+    device: *const SmartSocket,
 ) -> ReturnCode {
     let handle = &mut *handle;
-    let device = &mut *device;
+    let device = &*device;
 
     handle.rt.block_on(async {
         match device.off().await {
